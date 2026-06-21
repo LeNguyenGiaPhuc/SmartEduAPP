@@ -1,7 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.SmartEduAPP" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/paper</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="colorPrimary">@color/brand_blue</item>
+        <item name="colorSecondary">@color/brand_orange</item>
+        <item name="colorTertiary">@color/brand_purple</item>
+        <item name="android:forceDarkAllowed">false</item>
     </style>
+
+    <style name="Theme.SmartEduAPP" parent="Base.Theme.SmartEduAPP" />
 </resources>

@@ -2,4 +2,17 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="ink">#18202A</color>
+    <color name="ink_muted">#6D7682</color>
+    <color name="paper">#FFFDFE</color>
+    <color name="surface_soft">#F7FBFF</color>
+    <color name="line_soft">#D8EAF3</color>
+    <color name="brand_blue">#16A8D8</color>
+    <color name="brand_blue_dark">#0B82BF</color>
+    <color name="brand_orange">#FFA733</color>
+    <color name="brand_purple">#C246D9</color>
+    <color name="brand_pink">#FFC8D2</color>
+    <color name="mint">#DDF6EE</color>
+    <color name="cream">#FFF3D7</color>
+    <color name="danger_soft">#FFE7EB</color>
 </resources>
