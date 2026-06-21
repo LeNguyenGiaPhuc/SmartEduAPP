@@ -90,10 +90,16 @@ public class MainActivity extends AppCompatActivity {
     private void applySystemBars() {
         View root = findViewById(R.id.main);
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            // Android 15 draws the app edge-to-edge by default. Include the display
+            // cutout safe area so every screen header stays below a punch-hole camera.
+            Insets systemBars = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        ViewCompat.requestApplyInsets(root);
     }
 
 }
