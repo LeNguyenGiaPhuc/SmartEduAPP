@@ -39,51 +39,30 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Bộ câu hỏi ôn tập"
+                android:text="Quiz: Vòng đời Activity"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
-            app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Câu hỏi Trắc nghiệm"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:lineSpacingExtra="5dp"
-                    android:text="1. DNA là phân tử mang thông tin gì?\n   A. Năng lượng     B. Di truyền\n   C. Nước           D. Muối khoáng\n\n2. Thành phần tạo nên DNA là gì?\n   A. Nucleotide     B. Lipid\n   C. Protein        D. Vitamin\n\n3. Tế bào được xem là gì?\n   A. Đơn vị sống cơ bản     B. Mô cơ\n   C. Cơ quan lớn nhất       D. Chất khoáng"
-                    android:textColor="@color/ink"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            android:background="@drawable/bg_badge_blue"
+            android:paddingStart="12dp"
+            android:paddingTop="7dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="7dp"
+            android:text="Câu 1 / 5"
+            android:textColor="@color/brand_blue_dark"
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="20dp"
             app:cardElevation="4dp"
@@ -99,50 +78,55 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Câu hỏi Tự luận"
+                    android:text="Callback nào được gọi khi Activity được tạo lần đầu?"
                     android:textColor="@color/ink"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
-                <TextView
+                <RadioGroup
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="1. Vì sao DNA quan trọng với sinh vật?"
-                    android:textColor="@color/ink"
-                    android:textSize="14sp" />
+                    android:layout_marginTop="16dp">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_field_outline"
-                    android:gravity="center_vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="Nhập câu trả lời ngắn..."
-                    android:textColor="@color/ink_muted"
-                    android:textSize="14sp" />
+                    <RadioButton
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_field_outline"
+                        android:padding="14dp"
+                        android:text="A. onCreate()"
+                        android:textColor="@color/ink"
+                        android:textSize="16sp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="2. Hãy giải thích vai trò của tế bào bằng lời của em."
-                    android:textColor="@color/ink"
-                    android:textSize="14sp" />
+                    <RadioButton
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_field_outline"
+                        android:padding="14dp"
+                        android:text="B. onPause()"
+                        android:textColor="@color/ink"
+                        android:textSize="16sp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_field_outline"
-                    android:gravity="center_vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="Nhập câu trả lời ngắn..."
-                    android:textColor="@color/ink_muted"
-                    android:textSize="14sp" />
+                    <RadioButton
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_field_outline"
+                        android:padding="14dp"
+                        android:text="C. onStop()"
+                        android:textColor="@color/ink"
+                        android:textSize="16sp" />
+
+                    <RadioButton
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_field_outline"
+                        android:padding="14dp"
+                        android:text="D. onDestroy()"
+                        android:textColor="@color/ink"
+                        android:textSize="16sp" />
+                </RadioGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -155,7 +139,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="  Kiểm tra đáp án"
+            android:text="Nộp bài và chấm điểm"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />

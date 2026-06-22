@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_app_gradient"
-    android:fillViewport="true"
-    tools:context="hcmute.com.smarteduapp.MainActivity">
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -57,50 +55,155 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Chụp hoặc nhập tài liệu để biến ảnh bài học thành tóm tắt, câu hỏi và phần giải thích dễ hiểu."
+            android:text="Quản lý môn học, tài liệu và bộ ôn tập của bạn trong một nơi."
             android:textColor="@color/ink_muted"
             android:textSize="14sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="24dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/cardCapture"
                 android:layout_width="0dp"
-                android:layout_height="136dp"
-                android:layout_marginEnd="8dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/bg_button_blue"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:gravity="center"
-                android:padding="14dp"
-                android:text="Chụp ảnh\ntài liệu"
-                android:textColor="@color/white"
-                android:textSize="16sp"
+                android:text="Môn học của bạn"
+                android:textColor="@color/ink"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/cardGallery"
-                android:layout_width="0dp"
-                android:layout_height="136dp"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_button_orange"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
-                android:gravity="center"
-                android:padding="14dp"
-                android:text="Chọn ảnh\ntừ thư viện"
-                android:textColor="@color/white"
-                android:textSize="16sp"
+                android:id="@+id/buttonAddSubject"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_badge_blue"
+                android:paddingStart="14dp"
+                android:paddingTop="9dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="9dp"
+                android:text="Thêm môn"
+                android:textColor="@color/brand_blue_dark"
+                android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardSubjectMobile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="@color/paper"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp"
+            app:strokeColor="@color/brand_blue"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_document_thumb_blue"
+                    android:gravity="center"
+                    android:text="LT\nMobile"
+                    android:textAlignment="center"
+                    android:textColor="@color/brand_blue_dark"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Lập trình Mobile"
+                        android:textColor="@color/ink"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="3 tài liệu · 1 quiz đã làm"
+                        android:textColor="@color/ink_muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardSubjectDatabase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="@color/paper"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="3dp"
+            app:strokeColor="@color/line_soft"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_document_thumb"
+                    android:gravity="center"
+                    android:text="CSDL"
+                    android:textColor="#7B5B24"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Cơ sở dữ liệu"
+                        android:textColor="@color/ink"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="2 tài liệu · Chưa có quiz"
+                        android:textColor="@color/ink_muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -113,7 +216,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Tài liệu gần đây"
+                android:text="Hoạt động gần đây"
                 android:textColor="@color/ink"
                 android:textSize="19sp"
                 android:textStyle="bold" />
@@ -125,143 +228,91 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="8dp"
-                android:text="Xem tất cả"
+                android:text="Xem kết quả"
                 android:textColor="@color/brand_blue_dark"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <HorizontalScrollView
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardRecentDocument"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:overScrollMode="never"
-            android:scrollbars="none">
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="@color/paper"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="3dp"
+            app:strokeColor="@color/line_soft"
+            app:strokeWidth="1dp">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="62dp"
+                    android:layout_height="62dp"
+                    android:background="@drawable/bg_document_thumb_blue"
+                    android:gravity="center"
+                    android:text="OCR"
+                    android:textColor="@color/brand_blue_dark"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:layout_width="132dp"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="match_parent"
-                        android:layout_height="112dp"
-                        android:background="@drawable/bg_document_thumb_blue"
-                        android:gravity="center"
-                        android:text="OCR"
-                        android:textColor="@color/brand_blue_dark"
+                        android:layout_height="wrap_content"
+                        android:text="Vòng đời Activity"
+                        android:textColor="@color/ink"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Tài liệu Sinh học - Bài 5"
-                        android:textColor="@color/ink"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="132dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="112dp"
-                        android:background="@drawable/bg_document_thumb"
-                        android:gravity="center"
-                        android:text="AI"
-                        android:textColor="#7B5B24"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Tài liệu Lịch sử - Chương 1"
-                        android:textColor="@color/ink"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="132dp"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="112dp"
-                        android:background="@drawable/bg_document_thumb_blue"
-                        android:gravity="center"
-                        android:text="Q&amp;A"
-                        android:textColor="@color/brand_blue_dark"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Tài liệu Toán - Bài 2"
-                        android:textColor="@color/ink"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:layout_marginTop="4dp"
+                        android:text="Lập trình Mobile · Đã tạo tóm tắt"
+                        android:textColor="@color/ink_muted"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </LinearLayout>
-        </HorizontalScrollView>
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="74dp"
+            android:layout_height="70dp"
             android:layout_marginTop="28dp"
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="24dp"
-            app:cardElevation="5dp"
+            app:cardElevation="4dp"
             app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:weightSum="4">
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:text="Trang chủ"
+                    android:text="Môn học"
                     android:textColor="@color/brand_blue_dark"
-                    android:textSize="11sp"
+                    android:textSize="12sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="Tự học"
-                    android:textColor="@color/ink_muted"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="Bài giảng"
-                    android:textColor="@color/ink_muted"
-                    android:textSize="11sp" />
 
                 <TextView
                     android:id="@+id/navHistory"
@@ -271,9 +322,9 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:gravity="center"
-                    android:text="Lịch sử"
+                    android:text="Kết quả"
                     android:textColor="@color/ink_muted"
-                    android:textSize="11sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>

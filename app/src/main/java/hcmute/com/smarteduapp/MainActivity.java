@@ -37,10 +37,46 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         applySystemBars();
 
-        bindClick(R.id.cardCapture, this::showProcessDocument);
-        bindClick(R.id.cardGallery, this::showProcessDocument);
+        bindClick(R.id.cardSubjectMobile, this::showSubjectDetail);
+        bindClick(R.id.cardSubjectDatabase, this::showSubjectDetail);
+        bindClick(R.id.cardRecentDocument, this::showSubjectDetail);
+        bindClick(R.id.buttonAddSubject, this::showSubjectForm);
         bindClick(R.id.linkHistory, this::showHistory);
         bindClick(R.id.navHistory, this::showHistory);
+    }
+
+    private void showSubjectDetail() {
+        currentScreen = R.layout.screen_subject_detail;
+        setContentView(R.layout.screen_subject_detail);
+        applySystemBars();
+
+        bindClick(R.id.backHomeFromSubject, this::showHome);
+        bindClick(R.id.buttonEditSubject, this::showSubjectForm);
+        bindClick(R.id.buttonAddDocument, this::showDocumentForm);
+        bindClick(R.id.cardActivityDocument, this::showProcessDocument);
+        bindClick(R.id.navSubjects, this::showHome);
+        bindClick(R.id.navHistoryFromSubject, this::showHistory);
+    }
+
+    private void showSubjectForm() {
+        currentScreen = R.layout.screen_subject_form;
+        setContentView(R.layout.screen_subject_form);
+        applySystemBars();
+
+        bindClick(R.id.backSubjects, this::showHome);
+        bindClick(R.id.buttonSaveSubject, this::showSubjectDetail);
+        bindClick(R.id.buttonDeleteSubject, this::showHome);
+    }
+
+    private void showDocumentForm() {
+        currentScreen = R.layout.screen_document_form;
+        setContentView(R.layout.screen_document_form);
+        applySystemBars();
+
+        bindClick(R.id.backSubjectFromDocument, this::showSubjectDetail);
+        bindClick(R.id.buttonCamera, this::showProcessDocument);
+        bindClick(R.id.buttonGallery, this::showProcessDocument);
+        bindClick(R.id.buttonContinueOcr, this::showProcessDocument);
     }
 
     private void showProcessDocument() {
@@ -48,19 +84,28 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.screen_process_document);
         applySystemBars();
 
-        bindClick(R.id.backHome, this::showHome);
-        bindClick(R.id.buttonSummary, this::showSummaryExplain);
-        bindClick(R.id.buttonExplain, this::showSummaryExplain);
-        bindClick(R.id.buttonQuestions, this::showQuestions);
+        bindClick(R.id.backHome, this::showSubjectDetail);
+        bindClick(R.id.buttonSummary, this::showSummary);
+        bindClick(R.id.buttonQuestions, this::showQuestionBank);
+        bindClick(R.id.buttonSaveDocument, this::showSubjectDetail);
     }
 
-    private void showSummaryExplain() {
+    private void showSummary() {
         currentScreen = R.layout.screen_summary_explain;
         setContentView(R.layout.screen_summary_explain);
         applySystemBars();
 
         bindClick(R.id.backProcess, this::showProcessDocument);
-        bindClick(R.id.buttonSaveHistory, this::showHistory);
+        bindClick(R.id.buttonStartQuiz, this::showQuestionBank);
+    }
+
+    private void showQuestionBank() {
+        currentScreen = R.layout.screen_question_bank;
+        setContentView(R.layout.screen_question_bank);
+        applySystemBars();
+
+        bindClick(R.id.backProcessFromBank, this::showProcessDocument);
+        bindClick(R.id.buttonStartQuizFromBank, this::showQuestions);
     }
 
     private void showQuestions() {
@@ -69,7 +114,17 @@ public class MainActivity extends AppCompatActivity {
         applySystemBars();
 
         bindClick(R.id.backProcessFromQuestions, this::showProcessDocument);
-        bindClick(R.id.buttonCheckAnswers, this::showHistory);
+        bindClick(R.id.buttonCheckAnswers, this::showQuizResult);
+    }
+
+    private void showQuizResult() {
+        currentScreen = R.layout.screen_quiz_result;
+        setContentView(R.layout.screen_quiz_result);
+        applySystemBars();
+
+        bindClick(R.id.backQuestionBank, this::showQuestionBank);
+        bindClick(R.id.buttonViewHistory, this::showHistory);
+        bindClick(R.id.buttonRetryQuiz, this::showQuestions);
     }
 
     private void showHistory() {

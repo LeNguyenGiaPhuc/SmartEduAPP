@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Tài liệu: Sinh học 10"
+                android:text="Tài liệu: Vòng đời Activity"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -80,13 +80,16 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
-                <TextView
+                <EditText
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="132dp"
                     android:layout_marginTop="10dp"
-                    android:lineSpacingExtra="4dp"
-                    android:text="DNA là phân tử mang thông tin di truyền, cấu trúc gồm các nucleotide. Sinh học tế bào nghiên cứu cấu trúc và chức năng của tế bào..."
-                    android:textColor="@color/ink_muted"
+                    android:background="@drawable/bg_field_outline"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:padding="12dp"
+                    android:text="Activity là một thành phần giao diện Android. Hệ thống gọi các callback như onCreate, onStart và onResume theo vòng đời của Activity."
+                    android:textColor="@color/ink"
                     android:textSize="15sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -100,7 +103,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="  Tóm tắt AI"
+            android:text="Tạo tóm tắt"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
@@ -114,13 +117,13 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="  Tạo câu hỏi AI"
+            android:text="Tạo quiz"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/buttonExplain"
+            android:id="@+id/buttonSaveDocument"
             android:layout_width="match_parent"
             android:layout_height="58dp"
             android:layout_marginTop="12dp"
@@ -128,7 +131,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="  Giải thích AI"
+            android:text="Lưu tài liệu"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />

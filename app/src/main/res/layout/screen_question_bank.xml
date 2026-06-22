@@ -23,7 +23,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/backProcess"
+                android:id="@+id/backProcessFromBank"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:background="@drawable/bg_pill"
@@ -39,92 +39,105 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Tóm tắt tài liệu"
+                android:text="Bộ câu hỏi ôn tập"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Vòng đời Activity · 5 câu trắc nghiệm"
+            android:textColor="@color/ink_muted"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_button_purple"
+            android:gravity="center"
+            android:text="Tạo lại câu hỏi bằng AI"
+            android:textColor="@color/white"
+            android:textStyle="bold" />
+
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="18dp"
             app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="3dp"
+            app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:padding="16dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Tóm tắt ý chính"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
+                    android:text="Câu 1"
+                    android:textColor="@color/brand_blue_dark"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:lineSpacingExtra="7dp"
-                    android:text="• Activity là một màn hình tương tác trong ứng dụng Android.\n• onCreate dùng để khởi tạo giao diện và dữ liệu.\n• onStart và onResume đưa Activity về trạng thái sẵn sàng.\n• onPause và onStop xảy ra khi Activity không còn ở phía trước."
+                    android:layout_marginTop="6dp"
+                    android:text="Callback nào được gọi khi Activity được tạo lần đầu?"
                     android:textColor="@color/ink"
-                    android:textSize="15sp" />
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_badge_blue"
+                    android:paddingStart="10dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="6dp"
+                    android:text="Đáp án đúng: A"
+                    android:textColor="@color/brand_blue_dark"
+                    android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="3dp"
+            app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
-            <LinearLayout
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Mẹo ôn tập"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:lineSpacingExtra="5dp"
-                    android:text="Hãy nhớ: tạo Activity thì bắt đầu ở onCreate; rời màn hình thì hệ thống gọi onPause hoặc onStop."
-                    android:textColor="@color/ink_muted"
-                    android:textSize="15sp" />
-            </LinearLayout>
+                android:padding="16dp"
+                android:text="Câu 2 · Activity nào không còn hiển thị khi onStop được gọi?"
+                android:textColor="@color/ink"
+                android:textSize="16sp" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
-            android:id="@+id/buttonStartQuiz"
+            android:id="@+id/buttonStartQuizFromBank"
             android:layout_width="match_parent"
             android:layout_height="58dp"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="22dp"
             android:background="@drawable/bg_button_blue"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Làm quiz ngay"
+            android:text="Bắt đầu làm quiz"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
