@@ -35,6 +35,7 @@
                 android:textSize="34sp" />
 
             <TextView
+                android:id="@+id/subjectTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
@@ -62,6 +63,7 @@
                 android:padding="18dp">
 
                 <TextView
+                    android:id="@+id/subjectStats"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Tổng quan môn học"
@@ -118,6 +120,21 @@
             android:textColor="@color/ink"
             android:textSize="19sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/emptyDocuments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:text="Chưa có tài liệu trong môn học này."
+            android:textColor="@color/ink_muted" />
+
+        <LinearLayout
+            android:id="@+id/documentListContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardActivityDocument"
@@ -176,6 +193,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPendingDocument"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"

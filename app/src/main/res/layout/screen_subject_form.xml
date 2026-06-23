@@ -34,6 +34,7 @@
                 android:textSize="34sp" />
 
             <TextView
+                android:id="@+id/subjectFormTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
@@ -53,6 +54,7 @@
             android:textStyle="bold" />
 
         <EditText
+            android:id="@+id/inputSubjectName"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="8dp"
@@ -61,7 +63,6 @@
             android:inputType="textCapSentences"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:text="Lập trình Mobile"
             android:textColor="@color/ink"
             android:textColorHint="@color/ink_muted" />
 
@@ -74,6 +75,7 @@
             android:textStyle="bold" />
 
         <EditText
+            android:id="@+id/inputSubjectDescription"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="8dp"
@@ -82,7 +84,6 @@
             android:hint="Ghi chú ngắn về môn học"
             android:inputType="textMultiLine"
             android:padding="16dp"
-            android:text="Tài liệu và bài ôn tập môn Lập trình Mobile"
             android:textColor="@color/ink"
             android:textColorHint="@color/ink_muted" />
 

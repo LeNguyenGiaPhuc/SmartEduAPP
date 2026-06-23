@@ -53,6 +53,7 @@
             android:textStyle="bold" />
 
         <EditText
+            android:id="@+id/inputDocumentTitle"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="8dp"
@@ -63,6 +64,7 @@
             android:textColor="@color/ink" />
 
         <TextView
+            android:id="@+id/documentSubjectLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
@@ -115,7 +117,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Tiếp tục nhận dạng OCR"
+            android:text="Lưu tài liệu"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
