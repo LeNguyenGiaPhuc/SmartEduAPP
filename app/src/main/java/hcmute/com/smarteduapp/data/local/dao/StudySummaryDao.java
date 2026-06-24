@@ -1,4 +1,4 @@
-package hcmute.com.smarteduapp.data;
+package hcmute.com.smarteduapp.data.local.dao;
 
 import androidx.room.Dao;
 import androidx.room.Delete;
@@ -6,6 +6,8 @@ import androidx.room.Insert;
 import androidx.room.Query;
 
 import java.util.List;
+
+import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 
 @Dao
 public interface StudySummaryDao {

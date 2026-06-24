@@ -1,10 +1,21 @@
-package hcmute.com.smarteduapp.data;
+package hcmute.com.smarteduapp.data.local.database;
 
 import android.content.Context;
 
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+
+import hcmute.com.smarteduapp.data.local.dao.QuizAttemptDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyDocumentDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyQuestionDao;
+import hcmute.com.smarteduapp.data.local.dao.StudySummaryDao;
+import hcmute.com.smarteduapp.data.local.dao.SubjectDao;
+import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
+import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
+import hcmute.com.smarteduapp.data.local.entity.StudySummary;
+import hcmute.com.smarteduapp.data.local.entity.Subject;
 
 @Database(
         entities = {Subject.class, StudyDocument.class, StudySummary.class,

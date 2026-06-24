@@ -1,7 +1,6 @@
-package hcmute.com.smarteduapp;
+package hcmute.com.smarteduapp.ui.main;
 
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -11,7 +10,6 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -19,18 +17,19 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import hcmute.com.smarteduapp.data.AppDatabase;
-import hcmute.com.smarteduapp.data.StudyDocument;
-import hcmute.com.smarteduapp.data.Subject;
+import hcmute.com.smarteduapp.R;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
+import hcmute.com.smarteduapp.data.local.entity.Subject;
+import hcmute.com.smarteduapp.data.repository.DocumentRepository;
+import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
+import hcmute.com.smarteduapp.data.repository.SubjectRepository;
+import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 
 public class MainActivity extends AppCompatActivity {
 
     private int currentScreen = R.layout.activity_main;
-    private AppDatabase database;
-    private final ExecutorService databaseExecutor = Executors.newSingleThreadExecutor();
+    private SubjectRepository subjectRepository;
+    private DocumentRepository documentRepository;
     private long selectedSubjectId = -1L;
     private Subject selectedSubject;
 
@@ -38,7 +37,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        database = AppDatabase.getInstance(this);
+        subjectRepository = new SubjectRepository(this);
+        documentRepository = new DocumentRepository(this);
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -68,9 +68,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadSubjects() {
-        databaseExecutor.execute(() -> {
-            List<Subject> subjects = database.subjectDao().getAll();
-            runOnUiThread(() -> renderSubjects(subjects));
+        subjectRepository.getAll(new RepositoryCallback<List<Subject>>() {
+            @Override
+            public void onSuccess(List<Subject> subjects) {
+                renderSubjects(subjects);
+            }
         });
     }
 
@@ -81,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
         empty.setVisibility(subjects.isEmpty() ? View.VISIBLE : View.GONE);
 
         for (Subject subject : subjects) {
-            MaterialCardView card = createCard();
+            MaterialCardView card = UiViewFactory.createCard(this);
             card.setOnClickListener(v -> {
                 selectedSubjectId = subject.id;
                 selectedSubject = subject;
@@ -90,18 +92,19 @@ public class MainActivity extends AppCompatActivity {
 
             LinearLayout content = new LinearLayout(this);
             content.setOrientation(LinearLayout.VERTICAL);
-            content.setPadding(dp(16), dp(15), dp(16), dp(15));
+            content.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15),
+                    UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15));
 
-            TextView name = createText(subject.name, 17, R.color.ink, true);
-            TextView description = createText(
+            TextView name = UiViewFactory.createText(this, subject.name, 17, R.color.ink, true);
+            TextView description = UiViewFactory.createText(this,
                     isBlank(subject.description) ? "Chưa có mô tả" : subject.description,
                     13, R.color.ink_muted, false
             );
-            description.setPadding(0, dp(5), 0, 0);
+            description.setPadding(0, UiViewFactory.dp(this, 5), 0, 0);
             content.addView(name);
             content.addView(description);
             card.addView(content);
-            container.addView(card, verticalMargin(12));
+            container.addView(card, UiViewFactory.verticalMargin(this, 12));
         }
     }
 
@@ -125,10 +128,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadSubjectDetail() {
-        databaseExecutor.execute(() -> {
-            Subject subject = database.subjectDao().getById(selectedSubjectId);
-            List<StudyDocument> documents = database.studyDocumentDao().getBySubjectId(selectedSubjectId);
-            runOnUiThread(() -> {
+        subjectRepository.getById(selectedSubjectId, new RepositoryCallback<Subject>() {
+            @Override
+            public void onSuccess(Subject subject) {
                 if (subject == null) {
                     selectedSubjectId = -1L;
                     selectedSubject = null;
@@ -136,12 +138,18 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 selectedSubject = subject;
-                ((TextView) findViewById(R.id.subjectTitle)).setText(subject.name);
-                ((TextView) findViewById(R.id.subjectStats)).setText(
-                        documents.size() + " tài liệu đã lưu"
-                );
-                renderDocuments(documents);
-            });
+                documentRepository.getBySubjectId(selectedSubjectId,
+                        new RepositoryCallback<List<StudyDocument>>() {
+                            @Override
+                            public void onSuccess(List<StudyDocument> documents) {
+                                ((TextView) findViewById(R.id.subjectTitle)).setText(subject.name);
+                                ((TextView) findViewById(R.id.subjectStats)).setText(
+                                        documents.size() + " tài liệu đã lưu"
+                                );
+                                renderDocuments(documents);
+                            }
+                        });
+            }
         });
     }
 
@@ -152,20 +160,22 @@ public class MainActivity extends AppCompatActivity {
         empty.setVisibility(documents.isEmpty() ? View.VISIBLE : View.GONE);
 
         for (StudyDocument document : documents) {
-            MaterialCardView card = createCard();
+            MaterialCardView card = UiViewFactory.createCard(this);
             card.setOnClickListener(v -> showProcessDocument());
             LinearLayout content = new LinearLayout(this);
             content.setOrientation(LinearLayout.VERTICAL);
-            content.setPadding(dp(16), dp(15), dp(16), dp(15));
-            content.addView(createText(document.title, 16, R.color.ink, true));
-            TextView state = createText(
+            content.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15),
+                    UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15));
+            content.addView(UiViewFactory.createText(this, document.title, 16,
+                    R.color.ink, true));
+            TextView state = UiViewFactory.createText(this,
                     isBlank(document.ocrText) ? "Chưa có nội dung OCR" : "Đã lưu nội dung OCR",
                     13, R.color.ink_muted, false
             );
-            state.setPadding(0, dp(5), 0, 0);
+            state.setPadding(0, UiViewFactory.dp(this, 5), 0, 0);
             content.addView(state);
             card.addView(content);
-            container.addView(card, verticalMargin(12));
+            container.addView(card, UiViewFactory.verticalMargin(this, 12));
         }
     }
 
@@ -183,16 +193,16 @@ public class MainActivity extends AppCompatActivity {
         title.setText(isEditing ? "Chỉnh sửa môn học" : "Thêm môn học");
 
         if (isEditing) {
-            databaseExecutor.execute(() -> {
-                Subject subject = database.subjectDao().getById(subjectId);
-                runOnUiThread(() -> {
+            subjectRepository.getById(subjectId, new RepositoryCallback<Subject>() {
+                @Override
+                public void onSuccess(Subject subject) {
                     if (subject == null) {
                         showHome();
                         return;
                     }
                     nameInput.setText(subject.name);
                     descriptionInput.setText(subject.description);
-                });
+                }
             });
         }
 
@@ -209,38 +219,67 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        databaseExecutor.execute(() -> {
-            try {
-                if (subjectId > 0) {
-                    Subject subject = database.subjectDao().getById(subjectId);
+        if (subjectId > 0) {
+            subjectRepository.getById(subjectId, new RepositoryCallback<Subject>() {
+                @Override
+                public void onSuccess(Subject subject) {
                     if (subject != null) {
                         subject.name = name;
                         subject.description = description;
-                        database.subjectDao().update(subject);
+                        subjectRepository.update(subject, new RepositoryCallback<Integer>() {
+                            @Override
+                            public void onSuccess(Integer result) {
+                                selectedSubjectId = subjectId;
+                                selectedSubject = subject;
+                                showSubjectDetail();
+                            }
+
+                            @Override
+                            public void onError(Exception exception) {
+                                showSubjectSaveError();
+                            }
+                        });
                     }
-                    selectedSubjectId = subjectId;
-                } else {
-                    selectedSubjectId = database.subjectDao().insert(
-                            new Subject(name, description, System.currentTimeMillis())
-                    );
                 }
-                runOnUiThread(this::showSubjectDetail);
-            } catch (Exception exception) {
-                runOnUiThread(() -> Toast.makeText(this,
-                        "Tên môn học đã tồn tại hoặc không thể lưu", Toast.LENGTH_SHORT).show());
+            });
+            return;
+        }
+
+        subjectRepository.create(name, description, new RepositoryCallback<Long>() {
+            @Override
+            public void onSuccess(Long id) {
+                selectedSubjectId = id;
+                showSubjectDetail();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                showSubjectSaveError();
             }
         });
     }
 
     private void deleteSubject(long subjectId) {
         if (subjectId <= 0) return;
-        databaseExecutor.execute(() -> {
-            Subject subject = database.subjectDao().getById(subjectId);
-            if (subject != null) database.subjectDao().delete(subject);
-            selectedSubjectId = -1L;
-            selectedSubject = null;
-            runOnUiThread(this::showHome);
+        subjectRepository.getById(subjectId, new RepositoryCallback<Subject>() {
+            @Override
+            public void onSuccess(Subject subject) {
+                if (subject == null) return;
+                subjectRepository.delete(subject, new RepositoryCallback<Integer>() {
+                    @Override
+                    public void onSuccess(Integer result) {
+                        selectedSubjectId = -1L;
+                        selectedSubject = null;
+                        showHome();
+                    }
+                });
+            }
         });
+    }
+
+    private void showSubjectSaveError() {
+        Toast.makeText(this, "Tên môn học đã tồn tại hoặc không thể lưu",
+                Toast.LENGTH_SHORT).show();
     }
 
     private void showDocumentForm() {
@@ -267,12 +306,17 @@ public class MainActivity extends AppCompatActivity {
             titleInput.setError("Nhập tên tài liệu");
             return;
         }
-        databaseExecutor.execute(() -> {
-            long now = System.currentTimeMillis();
-            database.studyDocumentDao().insert(
-                    new StudyDocument(selectedSubjectId, title, null, "", now, now)
-            );
-            runOnUiThread(this::showSubjectDetail);
+        documentRepository.create(selectedSubjectId, title, new RepositoryCallback<Long>() {
+            @Override
+            public void onSuccess(Long id) {
+                showSubjectDetail();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể lưu tài liệu",
+                        Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -328,40 +372,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.screen_history);
         applySystemBars();
         bindClick(R.id.backHomeFromHistory, this::showHome);
-    }
-
-    private MaterialCardView createCard() {
-        MaterialCardView card = new MaterialCardView(this);
-        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.paper));
-        card.setStrokeColor(ContextCompat.getColor(this, R.color.line_soft));
-        card.setStrokeWidth(dp(1));
-        card.setRadius(dp(18));
-        card.setCardElevation(dp(3));
-        card.setClickable(true);
-        card.setFocusable(true);
-        return card;
-    }
-
-    private TextView createText(String text, int sizeSp, int colorRes, boolean bold) {
-        TextView view = new TextView(this);
-        view.setText(text);
-        view.setTextSize(sizeSp);
-        view.setTextColor(ContextCompat.getColor(this, colorRes));
-        if (bold) view.setTypeface(null, android.graphics.Typeface.BOLD);
-        return view;
-    }
-
-    private LinearLayout.LayoutParams verticalMargin(int topMarginDp) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        params.topMargin = dp(topMarginDp);
-        return params;
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private boolean isBlank(String value) {

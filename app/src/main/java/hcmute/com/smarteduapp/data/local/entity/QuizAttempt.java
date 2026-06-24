@@ -1,4 +1,4 @@
-package hcmute.com.smarteduapp.data;
+package hcmute.com.smarteduapp.data.local.entity;
 
 import androidx.room.Entity;
 import androidx.room.ForeignKey;
