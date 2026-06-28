@@ -58,9 +58,12 @@
             android:textSize="14sp" />
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/docItem1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
+            android:clickable="true"
+            android:focusable="true"
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="18dp"
             app:cardElevation="4dp"
@@ -99,59 +102,33 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/textStatus1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Đã lưu nội dung OCR"
+                        android:textColor="@color/brand_blue_dark"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Lập trình Mobile · 4/5 câu đúng · 8.0 điểm"
                         android:textColor="@color/ink_muted"
                         android:textSize="13sp" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="34dp"
-                            android:layout_height="28dp"
-                            android:background="@drawable/bg_badge_blue"
-                            android:gravity="center"
-                            android:text="OCR"
-                            android:textColor="@color/brand_blue_dark"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="34dp"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_badge_orange"
-                            android:gravity="center"
-                            android:text="Q"
-                            android:textColor="#B56B00"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="34dp"
-                            android:layout_height="28dp"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_badge_purple"
-                            android:gravity="center"
-                            android:text="AI"
-                            android:textColor="@color/brand_purple"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/docItem2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true"
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="18dp"
             app:cardElevation="4dp"
@@ -190,6 +167,16 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/textStatus2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Chưa có nội dung OCR"
+                        android:textColor="@color/ink_muted"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
@@ -201,9 +188,12 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/docItem3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true"
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="18dp"
             app:cardElevation="4dp"
@@ -239,6 +229,16 @@
                         android:text="Tài liệu Toán - Bài 2"
                         android:textColor="@color/ink"
                         android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/textStatus3"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Đã lưu nội dung OCR"
+                        android:textColor="@color/brand_blue_dark"
+                        android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView

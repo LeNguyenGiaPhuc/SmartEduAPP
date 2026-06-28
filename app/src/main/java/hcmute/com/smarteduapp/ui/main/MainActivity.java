@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private DocumentRepository documentRepository;
     private long selectedSubjectId = -1L;
     private Subject selectedSubject;
+    private StudyDocument selectedDocument;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -161,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
 
         for (StudyDocument document : documents) {
             MaterialCardView card = UiViewFactory.createCard(this);
-            card.setOnClickListener(v -> showProcessDocument());
+            card.setOnClickListener(v -> openDocument(document.id));
             LinearLayout content = new LinearLayout(this);
             content.setOrientation(LinearLayout.VERTICAL);
             content.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15),
@@ -324,14 +325,51 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "Chọn ảnh và camera sẽ được thêm sau CRUD cơ bản", Toast.LENGTH_SHORT).show();
     }
 
+    private void openDocument(long id) {
+        documentRepository.getById(id, new RepositoryCallback<StudyDocument>() {
+            @Override
+            public void onSuccess(StudyDocument document) {
+                if (document != null) {
+                    selectedDocument = document;
+                    showProcessDocument();
+                }
+            }
+        });
+    }
+
     private void showProcessDocument() {
         currentScreen = R.layout.screen_process_document;
         setContentView(R.layout.screen_process_document);
         applySystemBars();
+
+        TextView textDocName = findViewById(R.id.textDocName);
+        EditText editOCRContent = findViewById(R.id.editOCRContent);
+
+        if (selectedDocument != null) {
+            textDocName.setText("Tài liệu: " + selectedDocument.title);
+            editOCRContent.setText(selectedDocument.ocrText);
+        }
+
         bindClick(R.id.backHome, this::showSubjectDetail);
+        bindClick(R.id.buttonSaveDoc, this::saveDocumentContent);
         bindClick(R.id.buttonSummary, this::showSummary);
         bindClick(R.id.buttonQuestions, this::showQuestionBank);
         bindClick(R.id.buttonSaveDocument, this::showSubjectDetail);
+        bindClick(R.id.buttonExplain, this::showSummary);
+    }
+
+    private void saveDocumentContent() {
+        if (selectedDocument == null) return;
+        EditText editOCRContent = findViewById(R.id.editOCRContent);
+        String newContent = editOCRContent.getText().toString();
+
+        selectedDocument.ocrText = newContent;
+        documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Đã lưu nội dung OCR!", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showSummary() {

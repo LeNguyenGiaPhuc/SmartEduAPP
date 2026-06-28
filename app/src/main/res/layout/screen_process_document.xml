@@ -35,17 +35,19 @@
                 android:textSize="34sp" />
 
             <TextView
+                android:id="@+id/textDocName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Tài liệu: Vòng đời Activity"
+                android:text="Tài liệu: Sinh học 10"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
         <TextView
+            android:id="@+id/imageDocThumb"
             android:layout_width="match_parent"
             android:layout_height="170dp"
             android:layout_marginTop="18dp"
@@ -81,21 +83,24 @@
                     android:textStyle="bold" />
 
                 <EditText
+                    android:id="@+id/editOCRContent"
                     android:layout_width="match_parent"
-                    android:layout_height="132dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_field_outline"
                     android:gravity="top"
+                    android:hint="Chưa có nội dung OCR. Nhập tại đây..."
                     android:inputType="textMultiLine"
+                    android:lineSpacingExtra="4dp"
+                    android:minLines="5"
                     android:padding="12dp"
-                    android:text="Activity là một thành phần giao diện Android. Hệ thống gọi các callback như onCreate, onStart và onResume theo vòng đời của Activity."
                     android:textColor="@color/ink"
                     android:textSize="15sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
-            android:id="@+id/buttonSummary"
+            android:id="@+id/buttonSaveDoc"
             android:layout_width="match_parent"
             android:layout_height="58dp"
             android:layout_marginTop="18dp"
@@ -103,7 +108,21 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Tạo tóm tắt"
+            android:text="  Lưu tài liệu"
+            android:textColor="@color/white"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/buttonSummary"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_button_blue"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="  Tóm tắt AI"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
@@ -123,7 +142,7 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/buttonSaveDocument"
+            android:id="@+id/buttonExplain"
             android:layout_width="match_parent"
             android:layout_height="58dp"
             android:layout_marginTop="12dp"
@@ -131,7 +150,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Lưu tài liệu"
+            android:text="Giải thích AI"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />

@@ -46,4 +46,27 @@ public class DocumentRepository {
             }
         });
     }
+
+    public void getById(long id, RepositoryCallback<StudyDocument> callback) {
+        executor.execute(() -> {
+            try {
+                StudyDocument document = documentDao.getById(id);
+                mainHandler.post(() -> callback.onSuccess(document));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void update(StudyDocument document, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                document.updatedAt = System.currentTimeMillis();
+                int result = documentDao.update(document);
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
 }
