@@ -433,7 +433,7 @@ public class MainActivity extends AppCompatActivity {
         if (selectedDocument == null) return;
 
         EditText editOCRContent = findViewById(R.id.editOCRContent);
-        String ocrText = editOCRContent.getText().toString();
+        String ocrText = editOCRContent.getText().toString().trim();
 
         if(isBlank(ocrText)){
             Toast.makeText(this, "Chưa có nội dung OCR để tóm tắt", Toast.LENGTH_SHORT).show();
@@ -441,24 +441,54 @@ public class MainActivity extends AppCompatActivity {
         }
 
         selectedDocument.ocrText = ocrText;
-
-        Toast.makeText(this, "Đang tóm tắt bằng Gemini...", Toast.LENGTH_SHORT).show();
-
-        geminiService.summarize(
-        ocrText,
-        new GeminiService.GeminiCallback() {
+        long documentId = selectedDocument.id;
+        documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
             @Override
-            public void onSuccess(String summaryContent) {
-                runOnUiThread(() -> saveGeneratedSummary(summaryContent));
+            public void onSuccess(Integer result) {
+                requestGeminiSummary(ocrText, documentId);
             }
 
             @Override
             public void onError(Exception exception) {
-                runOnUiThread(() ->
-                        Toast.makeText(MainActivity.this, "Không thể tóm tắt bằng Gemini", Toast.LENGTH_SHORT).show()
-                );
+                Toast.makeText(MainActivity.this, "Không thể lưu OCR trước khi tóm tắt", Toast.LENGTH_SHORT).show();
             }
-        }
+        });
+    }
+
+    private void requestGeminiSummary(String ocrText, long documentId) {
+        Toast.makeText(this, "Đang tóm tắt bằng Gemini...", Toast.LENGTH_SHORT).show();
+
+        geminiService.summarize(
+                ocrText,
+                new GeminiService.GeminiCallback() {
+                    @Override
+                    public void onSuccess(String summaryContent) {
+                        runOnUiThread(() -> {
+                            if (isBlank(summaryContent)) {
+                                Toast.makeText(
+                                        MainActivity.this,
+                                        "Gemini trả nội dung rỗng, đã dùng tóm tắt tạm",
+                                        Toast.LENGTH_SHORT
+                                ).show();
+                                saveGeneratedSummary(buildMockSummary(ocrText), documentId);
+                                return;
+                            }
+                            saveGeneratedSummary(summaryContent, documentId);
+                        });
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Gemini lỗi, đã dùng tóm tắt tạm",
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                            saveGeneratedSummary(buildMockSummary(ocrText), documentId);
+                        });
+                    }
+                }
         );
     }
 
@@ -468,7 +498,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     EditText editOCRContent = findViewById(R.id.editOCRContent);
-    String ocrText = editOCRContent.getText().toString();
+    String ocrText = editOCRContent.getText().toString().trim();
 
     if (isBlank(ocrText)) {
         Toast.makeText(this, "Chưa có nội dung OCR để tạo quiz", Toast.LENGTH_SHORT).show();
@@ -476,42 +506,94 @@ public class MainActivity extends AppCompatActivity {
     }
 
     selectedDocument.ocrText = ocrText;
+    long documentId = selectedDocument.id;
+    documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+        @Override
+        public void onSuccess(Integer result) {
+            requestGeminiQuiz(ocrText, documentId);
+        }
 
-    Toast.makeText(this, "Đang tạo quiz bằng Gemini...", Toast.LENGTH_SHORT).show();
+        @Override
+        public void onError(Exception exception) {
+            Toast.makeText(MainActivity.this, "Không thể lưu OCR trước khi tạo quiz", Toast.LENGTH_SHORT).show();
+        }
+    });
+    }
 
-    geminiService.generateQuiz(
-            ocrText,
-            new GeminiService.GeminiCallback() {
-                @Override
-                public void onSuccess(String quizJson) {
-                    runOnUiThread(() -> saveGeneratedQuestions(quizJson));
+    private void requestGeminiQuiz(String ocrText, long documentId) {
+        Toast.makeText(this, "Đang tạo quiz bằng Gemini...", Toast.LENGTH_SHORT).show();
+
+        geminiService.generateQuiz(
+                ocrText,
+                new GeminiService.GeminiCallback() {
+                    @Override
+                    public void onSuccess(String quizJson) {
+                        runOnUiThread(() -> saveGeneratedQuestions(quizJson, documentId, ocrText));
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Gemini lỗi, đã dùng câu hỏi mẫu",
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                            saveGeneratedQuestions(
+                                    buildMockQuestions(ocrText, documentId)
+                            );
+                        });
+                    }
                 }
-
-                @Override
-                public void onError(Exception exception) {
-                    runOnUiThread(() ->
-                            Toast.makeText(MainActivity.this, "Không thể tạo quiz bằng Gemini", Toast.LENGTH_SHORT).show()
-                    );
-                }
-            }
-    );
+        );
     }
 
     private void saveGeneratedQuestions(String quizJson) {
     if (selectedDocument == null) {
         return;
     }
+    saveGeneratedQuestions(quizJson, selectedDocument.id, selectedDocument.ocrText);
+    }
+
+    private void saveGeneratedQuestions(String quizJson, long documentId, String fallbackText) {
+    if (selectedDocument == null) {
+        return;
+    }
 
     try {
-        List<StudyQuestion> questions = parseQuizQuestions(quizJson, selectedDocument.id);
+        List<StudyQuestion> questions = parseQuizQuestions(quizJson, documentId);
+        if (questions.isEmpty()) {
+            Toast.makeText(this, "Gemini trả danh sách rỗng, đã dùng câu hỏi mẫu", Toast.LENGTH_SHORT).show();
+            questions = buildMockQuestions(fallbackText, documentId);
+        }
+
+        saveGeneratedQuestions(questions, documentId);
+    } catch (Exception exception) {
+        android.util.Log.e("GeminiQuiz", "Raw quiz JSON: " + quizJson, exception);
+        Toast.makeText(this, "Không thể đọc JSON Gemini, đã dùng câu hỏi mẫu", Toast.LENGTH_SHORT).show();
+        saveGeneratedQuestions(buildMockQuestions(fallbackText, documentId));
+    }
+    }
+
+    private void saveGeneratedQuestions(List<StudyQuestion> questions) {
+        if (selectedDocument == null) {
+            return;
+        }
+        saveGeneratedQuestions(questions, selectedDocument.id);
+    }
+
+    private void saveGeneratedQuestions(List<StudyQuestion> questions, long documentId) {
+        if (selectedDocument == null) {
+            return;
+        }
 
         if (questions.isEmpty()) {
-            Toast.makeText(this, "Gemini không tạo được câu hỏi", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Không tạo được câu hỏi", Toast.LENGTH_SHORT).show();
             return;
         }
 
         studyRepository.replaceQuestions(
-                selectedDocument.id,
+                documentId,
                 questions,
                 new RepositoryCallback<Integer>() {
                     @Override
@@ -525,24 +607,23 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
         );
-    } catch (Exception exception) {
-        android.util.Log.e("GeminiQuiz", "Raw quiz JSON: " + quizJson, exception);
-        Toast.makeText(this, "Không thể đọc JSON câu hỏi từ Gemini", Toast.LENGTH_SHORT).show();
-    }
     }
 
     private void saveGeneratedSummary(String summaryContent) {
     if (selectedDocument == null) {
         return;
     }
+    saveGeneratedSummary(summaryContent, selectedDocument.id);
+    }
 
+    private void saveGeneratedSummary(String summaryContent, long documentId) {
     if (isBlank(summaryContent)) {
-        Toast.makeText(this, "Gemini không trả về nội dung tóm tắt", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Không tạo được nội dung tóm tắt", Toast.LENGTH_SHORT).show();
         return;
     }
 
     studyRepository.createSummary(
-            selectedDocument.id,
+            documentId,
             summaryContent,
             new RepositoryCallback<Long>() {
                 @Override
@@ -1018,36 +1099,143 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private List<StudyQuestion> parseQuizQuestions(String quizJson, long documentId) throws Exception {
-        String cleanJson = quizJson.trim();
-        if (cleanJson.startsWith("```")) {
-            int firstNewline = cleanJson.indexOf('\n');
-            if (firstNewline != -1) {
-                cleanJson = cleanJson.substring(firstNewline).trim();
+        String cleanJson = extractJsonPayload(quizJson);
+        JSONArray array;
+        if (cleanJson.startsWith("{")) {
+            JSONObject object = new JSONObject(cleanJson);
+            array = object.optJSONArray("questions");
+            if (array == null) {
+                array = object.optJSONArray("data");
             }
-            if (cleanJson.endsWith("```")) {
-                cleanJson = cleanJson.substring(0, cleanJson.length() - 3).trim();
+            if (array == null) {
+                throw new IllegalArgumentException("Quiz JSON object does not contain questions array");
             }
+        } else {
+            array = new JSONArray(cleanJson);
         }
-        JSONArray array = new JSONArray(cleanJson);
         List<StudyQuestion> questions = new ArrayList<>();
 
         for (int i = 0; i < array.length(); i++) {
             JSONObject item = array.getJSONObject(i);
+            String correctOption = normalizeCorrectOption(item.optString("correctOption", "A"));
 
             StudyQuestion question = new StudyQuestion(
                     documentId,
-                    item.getString("questionText"),
-                    item.getString("optionA"),
-                    item.getString("optionB"),
-                    item.getString("optionC"),
-                    item.getString("optionD"),
-                    item.getString("correctOption"),
+                    item.optString("questionText", "Câu hỏi " + (i + 1)),
+                    item.optString("optionA", "Đáp án A"),
+                    item.optString("optionB", "Đáp án B"),
+                    item.optString("optionC", "Đáp án C"),
+                    item.optString("optionD", "Đáp án D"),
+                    correctOption,
                     item.optString("explanation", ""),
                     i + 1
             );
 
             questions.add(question);
         }
+
+        return questions;
+    }
+
+    private String extractJsonPayload(String rawText) {
+        String cleanText = rawText == null ? "" : rawText.trim();
+        if (cleanText.startsWith("```")) {
+            int firstNewline = cleanText.indexOf('\n');
+            if (firstNewline != -1) {
+                cleanText = cleanText.substring(firstNewline + 1).trim();
+            }
+            if (cleanText.endsWith("```")) {
+                cleanText = cleanText.substring(0, cleanText.length() - 3).trim();
+            }
+        }
+
+        int firstArray = cleanText.indexOf('[');
+        int lastArray = cleanText.lastIndexOf(']');
+        if (firstArray >= 0 && lastArray > firstArray) {
+            return cleanText.substring(firstArray, lastArray + 1);
+        }
+
+        int firstObject = cleanText.indexOf('{');
+        int lastObject = cleanText.lastIndexOf('}');
+        if (firstObject >= 0 && lastObject > firstObject) {
+            return cleanText.substring(firstObject, lastObject + 1);
+        }
+
+        return cleanText;
+    }
+
+    private String normalizeCorrectOption(String option) {
+        if (isBlank(option)) {
+            return "A";
+        }
+        String normalized = option.trim().toUpperCase(Locale.US);
+        if (normalized.startsWith("A")) return "A";
+        if (normalized.startsWith("B")) return "B";
+        if (normalized.startsWith("C")) return "C";
+        if (normalized.startsWith("D")) return "D";
+        return "A";
+    }
+
+    private List<StudyQuestion> buildMockQuestions(String ocrText, long documentId) {
+        String source = isBlank(ocrText) ? "nội dung tài liệu" : ocrText.trim();
+        String preview = source.length() > 90 ? source.substring(0, 90).trim() + "..." : source;
+        List<StudyQuestion> questions = new ArrayList<>();
+
+        questions.add(new StudyQuestion(
+                documentId,
+                "Ý chính của tài liệu này là gì?",
+                preview,
+                "Một nội dung không liên quan đến tài liệu",
+                "Thông tin về tài khoản người dùng",
+                "Cấu hình giao diện ứng dụng",
+                "A",
+                "Đáp án A được lấy trực tiếp từ nội dung OCR.",
+                1
+        ));
+        questions.add(new StudyQuestion(
+                documentId,
+                "Nguồn dữ liệu nào được dùng để tạo bộ câu hỏi?",
+                "Nội dung OCR của tài liệu",
+                "Tên ứng dụng",
+                "Màu nền giao diện",
+                "Lịch sử hệ thống",
+                "A",
+                "Ứng dụng tạo câu hỏi dựa trên phần OCR đã lưu.",
+                2
+        ));
+        questions.add(new StudyQuestion(
+                documentId,
+                "Sau khi tạo câu hỏi, dữ liệu nên được lưu ở đâu?",
+                "SQLite",
+                "Bộ nhớ tạm của màn hình",
+                "Toast message",
+                "Thanh trạng thái",
+                "A",
+                "Proposal yêu cầu lưu câu hỏi và đáp án vào SQLite.",
+                3
+        ));
+        questions.add(new StudyQuestion(
+                documentId,
+                "Người dùng cần làm gì trước khi tạo quiz?",
+                "Nhập hoặc lưu nội dung OCR",
+                "Xóa môn học",
+                "Đổi icon ứng dụng",
+                "Tắt kết nối mạng",
+                "A",
+                "Quiz được tạo từ OCR text nên cần có OCR trước.",
+                4
+        ));
+        questions.add(new StudyQuestion(
+                documentId,
+                "Kết quả quiz dùng để làm gì?",
+                "Theo dõi lịch sử học tập",
+                "Tạo màu nền mới",
+                "Đổi tên package",
+                "Xóa database",
+                "A",
+                "Điểm quiz được lưu để xem lại trong lịch sử học tập.",
+                5
+        ));
 
         return questions;
     }
