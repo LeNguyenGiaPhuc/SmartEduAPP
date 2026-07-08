@@ -703,9 +703,34 @@ public class MainActivity extends AppCompatActivity {
         });
         bindClick(R.id.buttonSummary, this::createSummaryFromCurrentDocument);
         bindClick(R.id.buttonQuestions, this::createQuizFromCurrentDocument);
-        bindClick(R.id.buttonExplain, this::createSummaryFromCurrentDocument);
+        bindClick(R.id.buttonExplain, this::createExplanationFromCurrentDocument);
         bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
         bindClick(R.id.buttonAddMoreImages, () -> addMoreImagesPickerLauncher.launch(new String[]{"image/*", "application/pdf"}));
+    }
+
+    private void createExplanationFromCurrentDocument() {
+        if (selectedDocument == null) return;
+
+        String ocrText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
+        if (isBlank(ocrText)) {
+            Toast.makeText(this, "Chưa có nội dung tài liệu để giải thích", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        long documentId = selectedDocument.id;
+        Toast.makeText(this, "Đang giải thích bằng Gemini...", Toast.LENGTH_SHORT).show();
+
+        geminiService.explain(ocrText, new GeminiService.GeminiCallback() {
+            @Override
+            public void onSuccess(String result) {
+                runOnUiThread(() -> saveGeneratedSummary(result, documentId));
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Lỗi giải thích: " + exception.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 
     private void loadDocumentImages(long documentId) {
@@ -988,14 +1013,25 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<StudySummary> summaries){
                 TextView summaryText = findViewById(R.id.textSummaryContent);
+                TextView summaryTitle = findViewById(R.id.textSummaryTitle);
+                TextView resultHeader = findViewById(R.id.textResultHeader);
 
                 if(summaries.isEmpty()){
-                    summaryText.setText("Chưa có tóm tắt. Hãy tạo tóm tắt!");
+                    summaryText.setText("Chưa có nội dung AI. Hãy tạo tóm tắt hoặc giải thích!");
                     return;
                 }
 
                 StudySummary latestSummary = summaries.get(0);
                 summaryText.setText(latestSummary.content);
+                
+                // Heuristic to decide title
+                if (latestSummary.content.contains("•") || latestSummary.content.length() < 500) {
+                    summaryTitle.setText("Tóm tắt tài liệu");
+                    resultHeader.setText("Tóm tắt ý chính");
+                } else {
+                    summaryTitle.setText("Giải thích chuyên sâu");
+                    resultHeader.setText("Nội dung chi tiết");
+                }
             }
 
             @Override

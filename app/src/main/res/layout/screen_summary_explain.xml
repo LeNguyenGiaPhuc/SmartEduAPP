@@ -35,11 +35,12 @@
                 android:textSize="34sp" />
 
             <TextView
+                android:id="@+id/textSummaryTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Tóm tắt tài liệu"
+                android:text="Kết quả AI"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -62,9 +63,10 @@
                 android:padding="18dp">
 
                 <TextView
+                    android:id="@+id/textResultHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Tóm tắt ý chính"
+                    android:text="Nội dung chi tiết"
                     android:textColor="@color/ink"
                     android:textSize="18sp"
                     android:textStyle="bold" />
