@@ -42,6 +42,7 @@ import java.io.IOException;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocumentImage;
 import hcmute.com.smarteduapp.data.local.entity.Subject;
 import hcmute.com.smarteduapp.data.repository.DocumentRepository;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
@@ -76,6 +77,8 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<String[]> documentImagePickerLauncher;
     private ActivityResultLauncher<String[]> documentFilePickerLauncher;
     private ActivityResultLauncher<Uri> cameraCaptureLauncher;
+    private ActivityResultLauncher<String[]> addMoreImagesPickerLauncher;
+    private List<StudyDocumentImage> selectedDocumentImages = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +112,27 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
                     handlePickedDocumentUri(uri);
+                }
+        );
+
+        addMoreImagesPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri == null || selectedDocument == null) return;
+                    try {
+                        getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception ignored) {}
+                    
+                    documentRepository.addImage(selectedDocument.id, uri.toString(), new RepositoryCallback<Long>() {
+                        @Override
+                        public void onSuccess(Long id) {
+                            loadDocumentImages(selectedDocument.id);
+                        }
+                        @Override
+                        public void onError(Exception e) {
+                            Toast.makeText(MainActivity.this, "Lỗi thêm ảnh", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 }
         );
 
@@ -666,6 +690,7 @@ public class MainActivity extends AppCompatActivity {
                 textContentStatus.setText("Đã có nội dung được quét. Bạn có thể xem nội dung hoặc dùng AI.");
             }
             showDocumentImage(selectedDocument.imageUri, imagePreview, imagePlaceholder);
+            loadDocumentImages(selectedDocument.id);
         }
 
         bindClick(R.id.backHome, this::showSubjectDetail);
@@ -680,6 +705,69 @@ public class MainActivity extends AppCompatActivity {
         bindClick(R.id.buttonQuestions, this::createQuizFromCurrentDocument);
         bindClick(R.id.buttonExplain, this::createSummaryFromCurrentDocument);
         bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
+        bindClick(R.id.buttonAddMoreImages, () -> addMoreImagesPickerLauncher.launch(new String[]{"image/*", "application/pdf"}));
+    }
+
+    private void loadDocumentImages(long documentId) {
+        documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
+            @Override
+            public void onSuccess(List<StudyDocumentImage> images) {
+                selectedDocumentImages = images;
+                renderThumbnails(images);
+            }
+            @Override
+            public void onError(Exception e) {}
+        });
+    }
+
+    private void renderThumbnails(List<StudyDocumentImage> images) {
+        LinearLayout container = findViewById(R.id.imageThumbnailsContainer);
+        if (container == null) return;
+        
+        // Remove all except the add button
+        View addButton = findViewById(R.id.buttonAddMoreImages);
+        container.removeAllViews();
+        if (addButton != null) container.addView(addButton);
+
+        for (StudyDocumentImage image : images) {
+            ImageView thumb = new ImageView(this);
+            int size = UiViewFactory.dp(this, 60);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+            lp.setMargins(0, 0, UiViewFactory.dp(this, 8), 0);
+            thumb.setLayoutParams(lp);
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setBackgroundResource(R.drawable.bg_pill);
+            thumb.setClipToOutline(true);
+            
+            try {
+                thumb.setImageURI(Uri.parse(image.imageUri));
+            } catch (Exception e) {
+                thumb.setImageResource(android.R.drawable.ic_menu_report_image);
+            }
+
+            thumb.setOnClickListener(v -> showDocumentImage(image.imageUri, findViewById(R.id.imageDocPreview), findViewById(R.id.imageDocThumb)));
+            
+            thumb.setOnLongClickListener(v -> {
+                new AlertDialog.Builder(this)
+                        .setTitle("Xóa ảnh")
+                        .setMessage("Bạn có muốn xóa ảnh này không?")
+                        .setPositiveButton("Xóa", (dialog, which) -> {
+                            documentRepository.deleteImage(image, new RepositoryCallback<Integer>() {
+                                @Override
+                                public void onSuccess(Integer result) {
+                                    loadDocumentImages(selectedDocument.id);
+                                }
+                                @Override
+                                public void onError(Exception e) {}
+                            });
+                        })
+                        .setNegativeButton("Hủy", null)
+                        .show();
+                return true;
+            });
+
+            container.addView(thumb);
+        }
     }
 
     private void showDocumentContent() {
@@ -740,35 +828,47 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        if (isBlank(selectedDocument.imageUri)) {
-            Toast.makeText(this, "Tài liệu chưa có ảnh để OCR", Toast.LENGTH_SHORT).show();
+        List<String> urisToOcr = new ArrayList<>();
+        if (!isBlank(selectedDocument.imageUri) && isImageAttachment(selectedDocument.imageUri)) {
+            urisToOcr.add(selectedDocument.imageUri);
+        }
+        for (StudyDocumentImage img : selectedDocumentImages) {
+            if (isImageAttachment(img.imageUri)) {
+                urisToOcr.add(img.imageUri);
+            }
+        }
+
+        if (urisToOcr.isEmpty()) {
+            Toast.makeText(this, "Tài liệu chưa có ảnh hợp lệ để OCR", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (!isImageAttachment(selectedDocument.imageUri)) {
-            Toast.makeText(this, "OCR hiện chỉ hỗ trợ ảnh. File này vẫn đã được lưu.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Đang nhận dạng OCR " + urisToOcr.size() + " ảnh...", Toast.LENGTH_SHORT).show();
+        processOcrQueue(urisToOcr, 0, new StringBuilder());
+    }
+
+    private void processOcrQueue(List<String> uris, int index, StringBuilder resultBuilder) {
+        if (index >= uris.size()) {
+            runOnUiThread(() -> handleOcrResult(resultBuilder.toString()));
             return;
         }
 
-        Toast.makeText(this, "Đang nhận dạng OCR...", Toast.LENGTH_SHORT).show();
         ocrService.recognizeText(
                 this,
-                Uri.parse(selectedDocument.imageUri),
+                Uri.parse(uris.get(index)),
                 new MlKitOcrService.OcrCallback() {
                     @Override
                     public void onSuccess(String recognizedText) {
-                        runOnUiThread(() -> handleOcrResult(recognizedText));
+                        if (!isBlank(recognizedText)) {
+                            if (resultBuilder.length() > 0) resultBuilder.append("\n\n");
+                            resultBuilder.append(recognizedText);
+                        }
+                        processOcrQueue(uris, index + 1, resultBuilder);
                     }
 
                     @Override
                     public void onError(Exception exception) {
-                        runOnUiThread(() ->
-                                Toast.makeText(
-                                        MainActivity.this,
-                                        "Không thể nhận dạng văn bản từ ảnh",
-                                        Toast.LENGTH_SHORT
-                                ).show()
-                        );
+                        processOcrQueue(uris, index + 1, resultBuilder);
                     }
                 }
         );

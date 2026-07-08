@@ -74,6 +74,36 @@
                 android:textStyle="bold" />
         </FrameLayout>
 
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/imageThumbnailsContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/buttonAddMoreImages"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_pill"
+                    android:backgroundTint="@color/surface_soft"
+                    android:gravity="center"
+                    android:text="+"
+                    android:textColor="@color/brand_blue_dark"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+                <!-- Thumbnails will be added here -->
+            </LinearLayout>
+        </HorizontalScrollView>
+
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
