@@ -63,27 +63,30 @@
                 android:padding="26dp">
 
                 <TextView
+                    android:id="@+id/resultScore"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="8.0"
+                    android:text="0.0"
                     android:textColor="@color/brand_blue_dark"
                     android:textSize="44sp"
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/resultCorrect"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="4 / 5 câu trả lời đúng"
+                    android:text="0 / 0 câu trả lời đúng"
                     android:textColor="@color/ink"
                     android:textSize="17sp"
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/resultDetail"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Vòng đời Activity · Lập trình Mobile"
+                    android:text="Chưa có kết quả"
                     android:textColor="@color/ink_muted" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -35,17 +34,19 @@
                 android:textSize="34sp" />
 
             <TextView
+                android:id="@+id/quizTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Quiz: Vòng đời Activity"
+                android:text="Làm quiz"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
         <TextView
+            android:id="@+id/quizSubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
@@ -54,81 +55,17 @@
             android:paddingTop="7dp"
             android:paddingEnd="12dp"
             android:paddingBottom="7dp"
-            android:text="Câu 1 / 5"
+            android:text="0 câu hỏi"
             android:textColor="@color/brand_blue_dark"
             android:textSize="13sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
+            android:id="@+id/quizQuestionsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Callback nào được gọi khi Activity được tạo lần đầu?"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <RadioGroup
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp">
-
-                    <RadioButton
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:background="@drawable/bg_field_outline"
-                        android:padding="14dp"
-                        android:text="A. onCreate()"
-                        android:textColor="@color/ink"
-                        android:textSize="16sp" />
-
-                    <RadioButton
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:background="@drawable/bg_field_outline"
-                        android:padding="14dp"
-                        android:text="B. onPause()"
-                        android:textColor="@color/ink"
-                        android:textSize="16sp" />
-
-                    <RadioButton
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:background="@drawable/bg_field_outline"
-                        android:padding="14dp"
-                        android:text="C. onStop()"
-                        android:textColor="@color/ink"
-                        android:textSize="16sp" />
-
-                    <RadioButton
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_field_outline"
-                        android:padding="14dp"
-                        android:text="D. onDestroy()"
-                        android:textColor="@color/ink"
-                        android:textSize="16sp" />
-                </RadioGroup>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            android:orientation="vertical" />
 
         <TextView
             android:id="@+id/buttonCheckAnswers"
