@@ -109,6 +109,14 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/selectedImageLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Chưa chọn ảnh tài liệu"
+            android:textColor="@color/ink_muted" />
+
+        <TextView
             android:id="@+id/buttonContinueOcr"
             android:layout_width="match_parent"
             android:layout_height="58dp"

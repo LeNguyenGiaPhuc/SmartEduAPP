@@ -34,11 +34,15 @@ public class DocumentRepository {
     }
 
     public void create(long subjectId, String title, RepositoryCallback<Long> callback) {
+        create(subjectId, title, null, callback);
+    }
+
+    public void create(long subjectId, String title, String imageUri, RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {
                 long now = System.currentTimeMillis();
                 long id = documentDao.insert(
-                        new StudyDocument(subjectId, title, null, "", now, now)
+                        new StudyDocument(subjectId, title, imageUri, "", now, now)
                 );
                 mainHandler.post(() -> callback.onSuccess(id));
             } catch (Exception exception) {

@@ -1,8 +1,12 @@
 package hcmute.com.smarteduapp.ui.main;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -14,8 +18,11 @@ import org.json.JSONObject;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
+import androidx.core.content.FileProvider;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
@@ -28,6 +35,8 @@ import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.io.File;
+import java.io.IOException;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
@@ -39,6 +48,7 @@ import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 import hcmute.com.smarteduapp.data.repository.StudyRepository;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.service.ai.GeminiService;
+import hcmute.com.smarteduapp.service.ocr.MlKitOcrService;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 
@@ -52,9 +62,14 @@ public class MainActivity extends AppCompatActivity {
     private Subject selectedSubject;
     private StudyDocument selectedDocument;
     private GeminiService geminiService;
+    private MlKitOcrService ocrService;
     private List<StudyQuestion> currentQuizQuestions = new ArrayList<>();
     private final Map<Long, String> selectedQuizAnswers = new HashMap<>();
     private QuizAttempt latestQuizAttempt;
+    private Uri selectedDocumentImageUri;
+    private Uri pendingCameraImageUri;
+    private ActivityResultLauncher<String[]> documentImagePickerLauncher;
+    private ActivityResultLauncher<Uri> cameraCaptureLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +79,8 @@ public class MainActivity extends AppCompatActivity {
         documentRepository = new DocumentRepository(this);
         studyRepository = new StudyRepository(this);
         geminiService = new GeminiService();
+        ocrService = new MlKitOcrService();
+        registerImageLaunchers();
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -76,6 +93,41 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         showHome();
+    }
+
+    private void registerImageLaunchers() {
+        documentImagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                if (uri == null) {
+                    return;
+                }
+                    try {
+                        getContentResolver().takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        );
+                    } catch (SecurityException ignored) {
+                        // Some providers do not expose persistable permissions. The URI is still usable
+                        // during the current app session, while ACTION_OPEN_DOCUMENT providers persist.
+                    }
+                    selectedDocumentImageUri = uri;
+                    updateSelectedImageLabel();
+                }
+        );
+
+        cameraCaptureLauncher = registerForActivityResult(
+                new ActivityResultContracts.TakePicture(),
+                success -> {
+                    if (Boolean.TRUE.equals(success) && pendingCameraImageUri != null) {
+                        selectedDocumentImageUri = pendingCameraImageUri;
+                        updateSelectedImageLabel();
+                        return;
+                    }
+                    pendingCameraImageUri = null;
+                    Toast.makeText(this, "Không chụp được ảnh", Toast.LENGTH_SHORT).show();
+                }
+        );
     }
 
     private void showHome() {
@@ -193,8 +245,10 @@ public class MainActivity extends AppCompatActivity {
                     UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15));
             content.addView(UiViewFactory.createText(this, document.title, 16,
                     R.color.ink, true));
+            String imageState = isBlank(document.imageUri) ? "Chưa có ảnh" : "Có ảnh";
+            String ocrState = isBlank(document.ocrText) ? "Chưa có nội dung OCR" : "Đã lưu nội dung OCR";
             TextView state = UiViewFactory.createText(this,
-                    isBlank(document.ocrText) ? "Chưa có nội dung OCR" : "Đã lưu nội dung OCR",
+                    imageState + " · " + ocrState,
                     13, R.color.ink_muted, false
             );
             state.setPadding(0, UiViewFactory.dp(this, 5), 0, 0);
@@ -312,6 +366,8 @@ public class MainActivity extends AppCompatActivity {
             showHome();
             return;
         }
+        selectedDocumentImageUri = null;
+        pendingCameraImageUri = null;
         currentScreen = R.layout.screen_document_form;
         setContentView(R.layout.screen_document_form);
         applySystemBars();
@@ -319,9 +375,10 @@ public class MainActivity extends AppCompatActivity {
         EditText titleInput = findViewById(R.id.inputDocumentTitle);
         TextView subjectLabel = findViewById(R.id.documentSubjectLabel);
         subjectLabel.setText("Môn học: " + (selectedSubject == null ? "" : selectedSubject.name));
+        updateSelectedImageLabel();
         bindClick(R.id.backSubjectFromDocument, this::showSubjectDetail);
-        bindClick(R.id.buttonCamera, () -> showImageFeatureMessage());
-        bindClick(R.id.buttonGallery, () -> showImageFeatureMessage());
+        bindClick(R.id.buttonCamera, this::captureDocumentImage);
+        bindClick(R.id.buttonGallery, this::pickDocumentImage);
         bindClick(R.id.buttonContinueOcr, () -> saveDocument(titleInput));
     }
 
@@ -331,7 +388,8 @@ public class MainActivity extends AppCompatActivity {
             titleInput.setError("Nhập tên tài liệu");
             return;
         }
-        documentRepository.create(selectedSubjectId, title, new RepositoryCallback<Long>() {
+        String imageUri = selectedDocumentImageUri == null ? null : selectedDocumentImageUri.toString();
+        documentRepository.create(selectedSubjectId, title, imageUri, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
                 showSubjectDetail();
@@ -345,8 +403,50 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void showImageFeatureMessage() {
-        Toast.makeText(this, "Chọn ảnh và camera sẽ được thêm sau CRUD cơ bản", Toast.LENGTH_SHORT).show();
+    private void pickDocumentImage() {
+        documentImagePickerLauncher.launch(new String[]{"image/*"});
+    }
+
+    private void captureDocumentImage() {
+        try {
+            pendingCameraImageUri = createCameraImageUri();
+            cameraCaptureLauncher.launch(pendingCameraImageUri);
+        } catch (IOException exception) {
+            Toast.makeText(this, "Không thể tạo file ảnh", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private Uri createCameraImageUri() throws IOException {
+        File picturesDirectory = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        if (picturesDirectory == null) {
+            throw new IOException("Cannot access app pictures directory");
+        }
+        File imageDirectory = new File(picturesDirectory, "documents");
+        if (!imageDirectory.exists() && !imageDirectory.mkdirs()) {
+            throw new IOException("Cannot create image directory");
+        }
+        File imageFile = File.createTempFile(
+                "smartedu_" + System.currentTimeMillis() + "_",
+                ".jpg",
+                imageDirectory
+        );
+        return FileProvider.getUriForFile(
+                this,
+                getPackageName() + ".fileprovider",
+                imageFile
+        );
+    }
+
+    private void updateSelectedImageLabel() {
+        TextView label = findViewById(R.id.selectedImageLabel);
+        if (label == null) {
+            return;
+        }
+        if (selectedDocumentImageUri == null) {
+            label.setText("Chưa chọn ảnh tài liệu");
+            return;
+        }
+        label.setText("Đã chọn ảnh tài liệu");
     }
 
     private void openDocument(long id) {
@@ -368,17 +468,86 @@ public class MainActivity extends AppCompatActivity {
 
         TextView textDocName = findViewById(R.id.textDocName);
         EditText editOCRContent = findViewById(R.id.editOCRContent);
+        ImageView imagePreview = findViewById(R.id.imageDocPreview);
+        TextView imagePlaceholder = findViewById(R.id.imageDocThumb);
 
         if (selectedDocument != null) {
             textDocName.setText("Tài liệu: " + selectedDocument.title);
             editOCRContent.setText(selectedDocument.ocrText);
+            showDocumentImage(selectedDocument.imageUri, imagePreview, imagePlaceholder);
         }
 
         bindClick(R.id.backHome, this::showSubjectDetail);
+        bindClick(R.id.buttonRunOcr, this::runOcrForCurrentDocument);
         bindClick(R.id.buttonSaveDoc, this::saveDocumentContent);
         bindClick(R.id.buttonSummary, this::createSummaryFromCurrentDocument);
         bindClick(R.id.buttonQuestions, this::createQuizFromCurrentDocument);
         bindClick(R.id.buttonExplain, this::createSummaryFromCurrentDocument);
+    }
+
+    private void runOcrForCurrentDocument() {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        if (isBlank(selectedDocument.imageUri)) {
+            Toast.makeText(this, "Tài liệu chưa có ảnh để OCR", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "Đang nhận dạng OCR...", Toast.LENGTH_SHORT).show();
+        ocrService.recognizeText(
+                this,
+                Uri.parse(selectedDocument.imageUri),
+                new MlKitOcrService.OcrCallback() {
+                    @Override
+                    public void onSuccess(String recognizedText) {
+                        runOnUiThread(() -> handleOcrResult(recognizedText));
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        runOnUiThread(() ->
+                                Toast.makeText(
+                                        MainActivity.this,
+                                        "Không thể nhận dạng văn bản từ ảnh",
+                                        Toast.LENGTH_SHORT
+                                ).show()
+                        );
+                    }
+                }
+        );
+    }
+
+    private void handleOcrResult(String recognizedText) {
+        EditText editOCRContent = findViewById(R.id.editOCRContent);
+        if (isBlank(recognizedText)) {
+            Toast.makeText(this, "Ảnh không có văn bản nhận dạng được", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        editOCRContent.setText(recognizedText);
+        selectedDocument.ocrText = recognizedText;
+        Toast.makeText(this, "Đã nhận dạng OCR, hãy kiểm tra rồi lưu", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showDocumentImage(String imageUri, ImageView imagePreview, TextView imagePlaceholder) {
+        if (isBlank(imageUri)) {
+            imagePreview.setVisibility(View.GONE);
+            imagePlaceholder.setVisibility(View.VISIBLE);
+            imagePlaceholder.setText("Chưa có ảnh tài liệu");
+            return;
+        }
+
+        try {
+            imagePreview.setImageURI(Uri.parse(imageUri));
+            imagePreview.setVisibility(View.VISIBLE);
+            imagePlaceholder.setVisibility(View.GONE);
+        } catch (Exception exception) {
+            imagePreview.setVisibility(View.GONE);
+            imagePlaceholder.setVisibility(View.VISIBLE);
+            imagePlaceholder.setText("Không thể hiển thị ảnh");
+        }
     }
 
     private void saveDocumentContent() {

@@ -46,16 +46,43 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/imageDocThumb"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="170dp"
             android:layout_marginTop="18dp"
-            android:background="@drawable/bg_document_thumb_blue"
+            android:background="@drawable/bg_document_thumb_blue">
+
+            <ImageView
+                android:id="@+id/imageDocPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="Ảnh tài liệu"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/imageDocThumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="Chưa có ảnh tài liệu"
+                android:textColor="@color/brand_blue_dark"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/buttonRunOcr"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_button_purple"
+            android:clickable="true"
+            android:focusable="true"
             android:gravity="center"
-            android:text="Ảnh tài liệu"
-            android:textColor="@color/brand_blue_dark"
-            android:textSize="18sp"
+            android:text="Nhận dạng OCR từ ảnh"
+            android:textColor="@color/white"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <com.google.android.material.card.MaterialCardView
