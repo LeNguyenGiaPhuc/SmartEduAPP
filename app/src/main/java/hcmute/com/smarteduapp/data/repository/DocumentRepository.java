@@ -73,4 +73,15 @@ public class DocumentRepository {
             }
         });
     }
+
+    public void delete(StudyDocument document, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int result = documentDao.delete(document);
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
 }

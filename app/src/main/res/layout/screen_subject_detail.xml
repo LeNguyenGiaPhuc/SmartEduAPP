@@ -46,46 +46,11 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="3dp"
-            app:strokeColor="@color/brand_blue"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:id="@+id/subjectStats"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Tổng quan môn học"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="3 tài liệu đã lưu · 1 quiz đã hoàn thành"
-                    android:textColor="@color/ink_muted"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
         <TextView
             android:id="@+id/buttonEditSubject"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="20dp"
             android:background="@drawable/bg_badge_blue"
             android:clickable="true"
             android:focusable="true"
@@ -245,36 +210,5 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="70dp"
-            android:layout_marginTop="28dp"
-            android:background="@drawable/bg_card_white"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/navSubjects"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="Môn học"
-                android:textColor="@color/brand_blue_dark"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/navHistoryFromSubject"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="Kết quả"
-                android:textColor="@color/ink_muted" />
-        </LinearLayout>
     </LinearLayout>
 </ScrollView>

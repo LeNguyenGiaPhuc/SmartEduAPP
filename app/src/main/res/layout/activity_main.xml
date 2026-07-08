@@ -225,123 +225,31 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <TextView
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="Hoạt động gần đây"
                 android:textColor="@color/ink"
                 android:textSize="19sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/linkHistory"
-                android:layout_width="wrap_content"
+                android:id="@+id/emptyRecentSubjects"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="8dp"
-                android:text="Xem kết quả"
-                android:textColor="@color/brand_blue_dark"
-                android:textStyle="bold" />
+                android:layout_marginTop="10dp"
+                android:text="Chưa có môn học được truy cập gần đây."
+                android:textColor="@color/ink_muted"
+                android:textSize="14sp" />
         </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardRecentDocument"
+        <LinearLayout
+            android:id="@+id/recentSubjectContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="18dp"
-            app:cardElevation="3dp"
-            app:strokeColor="@color/line_soft"
-            app:strokeWidth="1dp">
+            android:orientation="vertical" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="62dp"
-                    android:layout_height="62dp"
-                    android:background="@drawable/bg_document_thumb_blue"
-                    android:gravity="center"
-                    android:text="OCR"
-                    android:textColor="@color/brand_blue_dark"
-                    android:textStyle="bold" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Vòng đời Activity"
-                        android:textColor="@color/ink"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Lập trình Mobile · Đã tạo tóm tắt"
-                        android:textColor="@color/ink_muted"
-                        android:textSize="13sp" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="70dp"
-            android:layout_marginTop="28dp"
-            app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/line_soft"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="Môn học"
-                    android:textColor="@color/brand_blue_dark"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/navHistory"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="Kết quả"
-                    android:textColor="@color/ink_muted"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </ScrollView>

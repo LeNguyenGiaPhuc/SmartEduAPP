@@ -20,6 +20,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.content.FileProvider;
@@ -31,6 +32,7 @@ import com.google.android.material.card.MaterialCardView;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -54,6 +56,8 @@ import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String RECENT_SUBJECT_PREF = "recent_subject_ids";
+    private static final int MAX_RECENT_SUBJECTS = 3;
     private int currentScreen = R.layout.activity_main;
     private SubjectRepository subjectRepository;
     private DocumentRepository documentRepository;
@@ -65,10 +69,12 @@ public class MainActivity extends AppCompatActivity {
     private MlKitOcrService ocrService;
     private List<StudyQuestion> currentQuizQuestions = new ArrayList<>();
     private final Map<Long, String> selectedQuizAnswers = new HashMap<>();
+    private final LinkedHashMap<Long, Subject> recentSubjects = new LinkedHashMap<>();
     private QuizAttempt latestQuizAttempt;
     private Uri selectedDocumentImageUri;
     private Uri pendingCameraImageUri;
     private ActivityResultLauncher<String[]> documentImagePickerLauncher;
+    private ActivityResultLauncher<String[]> documentFilePickerLauncher;
     private ActivityResultLauncher<Uri> cameraCaptureLauncher;
 
     @Override
@@ -99,35 +105,49 @@ public class MainActivity extends AppCompatActivity {
         documentImagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(),
                 uri -> {
-                if (uri == null) {
-                    return;
-                }
-                    try {
-                        getContentResolver().takePersistableUriPermission(
-                            uri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        );
-                    } catch (SecurityException ignored) {
-                        // Some providers do not expose persistable permissions. The URI is still usable
-                        // during the current app session, while ACTION_OPEN_DOCUMENT providers persist.
+                    if (uri == null) {
+                        return;
                     }
-                    selectedDocumentImageUri = uri;
-                    updateSelectedImageLabel();
+                    handlePickedDocumentUri(uri);
+                }
+        );
+
+        documentFilePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri == null) {
+                        return;
+                    }
+                    handlePickedDocumentUri(uri);
                 }
         );
 
         cameraCaptureLauncher = registerForActivityResult(
                 new ActivityResultContracts.TakePicture(),
                 success -> {
-                    if (Boolean.TRUE.equals(success) && pendingCameraImageUri != null) {
-                        selectedDocumentImageUri = pendingCameraImageUri;
-                        updateSelectedImageLabel();
+                            if (Boolean.TRUE.equals(success) && pendingCameraImageUri != null) {
+                                selectedDocumentImageUri = pendingCameraImageUri;
+                                updateSelectedImageLabel();
                         return;
                     }
                     pendingCameraImageUri = null;
                     Toast.makeText(this, "Không chụp được ảnh", Toast.LENGTH_SHORT).show();
                 }
         );
+    }
+
+    private void handlePickedDocumentUri(Uri uri) {
+        try {
+            getContentResolver().takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+        } catch (SecurityException ignored) {
+            // Some providers do not expose persistable permissions. The URI is still usable
+            // during the current app session, while ACTION_OPEN_DOCUMENT providers persist.
+        }
+        selectedDocumentImageUri = uri;
+        updateSelectedImageLabel();
     }
 
     private void showHome() {
@@ -137,11 +157,9 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.cardSubjectMobile).setVisibility(View.GONE);
         findViewById(R.id.cardSubjectDatabase).setVisibility(View.GONE);
-        findViewById(R.id.cardRecentDocument).setVisibility(View.GONE);
         bindClick(R.id.buttonAddSubject, () -> showSubjectForm(-1L));
-        bindClick(R.id.linkHistory, this::showHistory);
-        bindClick(R.id.navHistory, this::showHistory);
         loadSubjects();
+        renderRecentSubjects();
     }
 
     private void loadSubjects() {
@@ -154,6 +172,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void renderSubjects(List<Subject> subjects) {
+        syncRecentSubjects(subjects);
+        renderRecentSubjects();
+
         LinearLayout container = findViewById(R.id.subjectListContainer);
         TextView empty = findViewById(R.id.emptySubjects);
         container.removeAllViews();
@@ -164,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
             card.setOnClickListener(v -> {
                 selectedSubjectId = subject.id;
                 selectedSubject = subject;
+                rememberRecentSubject(subject);
                 showSubjectDetail();
             });
 
@@ -185,6 +207,107 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void rememberRecentSubject(Subject subject) {
+        if (subject == null) {
+            return;
+        }
+        recentSubjects.remove(subject.id);
+        recentSubjects.put(subject.id, subject);
+        while (recentSubjects.size() > MAX_RECENT_SUBJECTS) {
+            Long oldestKey = recentSubjects.keySet().iterator().next();
+            recentSubjects.remove(oldestKey);
+        }
+        saveRecentSubjectIds();
+    }
+
+    private void syncRecentSubjects(List<Subject> subjects) {
+        if (!recentSubjects.isEmpty()) {
+            return;
+        }
+
+        String savedIds = getPreferences(MODE_PRIVATE).getString(RECENT_SUBJECT_PREF, "");
+        if (isBlank(savedIds)) {
+            return;
+        }
+
+        Map<Long, Subject> subjectMap = new HashMap<>();
+        for (Subject subject : subjects) {
+            subjectMap.put(subject.id, subject);
+        }
+
+        String[] ids = savedIds.split(",");
+        for (String rawId : ids) {
+            try {
+                long id = Long.parseLong(rawId.trim());
+                Subject subject = subjectMap.get(id);
+                if (subject != null) {
+                    recentSubjects.put(id, subject);
+                }
+            } catch (NumberFormatException ignored) {
+                // Skip invalid persisted ids.
+            }
+        }
+    }
+
+    private void saveRecentSubjectIds() {
+        StringBuilder ids = new StringBuilder();
+        for (Long id : recentSubjects.keySet()) {
+            if (ids.length() > 0) {
+                ids.append(",");
+            }
+            ids.append(id);
+        }
+        getPreferences(MODE_PRIVATE)
+                .edit()
+                .putString(RECENT_SUBJECT_PREF, ids.toString())
+                .apply();
+    }
+
+    private void renderRecentSubjects() {
+        LinearLayout container = findViewById(R.id.recentSubjectContainer);
+        TextView empty = findViewById(R.id.emptyRecentSubjects);
+        if (container == null || empty == null) {
+            return;
+        }
+
+        container.removeAllViews();
+        empty.setVisibility(recentSubjects.isEmpty() ? View.VISIBLE : View.GONE);
+
+        List<Subject> subjects = new ArrayList<>(recentSubjects.values());
+        for (int index = subjects.size() - 1; index >= 0; index--) {
+            Subject subject = subjects.get(index);
+            MaterialCardView card = UiViewFactory.createCard(this);
+            card.setOnClickListener(v -> {
+                selectedSubjectId = subject.id;
+                selectedSubject = subject;
+                rememberRecentSubject(subject);
+                showSubjectDetail();
+            });
+
+            LinearLayout content = new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(
+                    UiViewFactory.dp(this, 16),
+                    UiViewFactory.dp(this, 14),
+                    UiViewFactory.dp(this, 16),
+                    UiViewFactory.dp(this, 14)
+            );
+
+            content.addView(UiViewFactory.createText(this, subject.name, 16, R.color.ink, true));
+            TextView description = UiViewFactory.createText(
+                    this,
+                    isBlank(subject.description) ? "Vừa truy cập" : subject.description,
+                    13,
+                    R.color.ink_muted,
+                    false
+            );
+            description.setPadding(0, UiViewFactory.dp(this, 5), 0, 0);
+            content.addView(description);
+            card.addView(content);
+            container.addView(card, UiViewFactory.verticalMargin(this, 12));
+        }
+    }
+
     private void showSubjectDetail() {
         if (selectedSubjectId < 0) {
             showHome();
@@ -199,8 +322,6 @@ public class MainActivity extends AppCompatActivity {
         bindClick(R.id.backHomeFromSubject, this::showHome);
         bindClick(R.id.buttonEditSubject, () -> showSubjectForm(selectedSubjectId));
         bindClick(R.id.buttonAddDocument, this::showDocumentForm);
-        bindClick(R.id.navSubjects, this::showHome);
-        bindClick(R.id.navHistoryFromSubject, this::showHistory);
         loadSubjectDetail();
     }
 
@@ -215,14 +336,12 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 selectedSubject = subject;
+                rememberRecentSubject(subject);
                 documentRepository.getBySubjectId(selectedSubjectId,
                         new RepositoryCallback<List<StudyDocument>>() {
                             @Override
                             public void onSuccess(List<StudyDocument> documents) {
                                 ((TextView) findViewById(R.id.subjectTitle)).setText(subject.name);
-                                ((TextView) findViewById(R.id.subjectStats)).setText(
-                                        documents.size() + " tài liệu đã lưu"
-                                );
                                 renderDocuments(documents);
                             }
                         });
@@ -245,7 +364,9 @@ public class MainActivity extends AppCompatActivity {
                     UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15));
             content.addView(UiViewFactory.createText(this, document.title, 16,
                     R.color.ink, true));
-            String imageState = isBlank(document.imageUri) ? "Chưa có ảnh" : "Có ảnh";
+            String imageState = isBlank(document.imageUri)
+                    ? "Chưa có file"
+                    : getDocumentAttachmentLabel(document.imageUri);
             String ocrState = isBlank(document.ocrText) ? "Chưa có nội dung OCR" : "Đã lưu nội dung OCR";
             TextView state = UiViewFactory.createText(this,
                     imageState + " · " + ocrState,
@@ -362,33 +483,63 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDocumentForm() {
+        showDocumentForm(-1L);
+    }
+
+    private void showDocumentForm(long documentId) {
         if (selectedSubjectId < 0) {
             showHome();
             return;
         }
         selectedDocumentImageUri = null;
         pendingCameraImageUri = null;
+        boolean isEditing = documentId > 0;
         currentScreen = R.layout.screen_document_form;
         setContentView(R.layout.screen_document_form);
         applySystemBars();
 
         EditText titleInput = findViewById(R.id.inputDocumentTitle);
+        TextView formTitle = findViewById(R.id.documentFormTitle);
         TextView subjectLabel = findViewById(R.id.documentSubjectLabel);
+        View deleteButton = findViewById(R.id.buttonDeleteDocument);
+        formTitle.setText(isEditing ? "Chỉnh sửa tài liệu" : "Thêm tài liệu");
+        deleteButton.setVisibility(isEditing ? View.VISIBLE : View.GONE);
         subjectLabel.setText("Môn học: " + (selectedSubject == null ? "" : selectedSubject.name));
+
+        if (isEditing && selectedDocument != null) {
+            titleInput.setText(selectedDocument.title);
+            if (!isBlank(selectedDocument.imageUri)) {
+                selectedDocumentImageUri = Uri.parse(selectedDocument.imageUri);
+            }
+        }
+
         updateSelectedImageLabel();
-        bindClick(R.id.backSubjectFromDocument, this::showSubjectDetail);
+        bindClick(R.id.backSubjectFromDocument, () -> {
+            if (isEditing && selectedDocument != null) {
+                showProcessDocument();
+                return;
+            }
+            showSubjectDetail();
+        });
         bindClick(R.id.buttonCamera, this::captureDocumentImage);
         bindClick(R.id.buttonGallery, this::pickDocumentImage);
-        bindClick(R.id.buttonContinueOcr, () -> saveDocument(titleInput));
+        bindClick(R.id.buttonFile, this::pickDocumentFile);
+        bindClick(R.id.buttonContinueOcr, () -> saveDocument(documentId, titleInput));
+        bindClick(R.id.buttonDeleteDocument, this::confirmDeleteCurrentDocument);
     }
 
-    private void saveDocument(EditText titleInput) {
+    private void saveDocument(long documentId, EditText titleInput) {
         String title = titleInput.getText().toString().trim();
         if (title.isEmpty()) {
             titleInput.setError("Nhập tên tài liệu");
             return;
         }
         String imageUri = selectedDocumentImageUri == null ? null : selectedDocumentImageUri.toString();
+        if (documentId > 0) {
+            updateDocument(documentId, title, imageUri);
+            return;
+        }
+
         documentRepository.create(selectedSubjectId, title, imageUri, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
@@ -403,8 +554,44 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void updateDocument(long documentId, String title, String imageUri) {
+        if (selectedDocument == null || selectedDocument.id != documentId) {
+            Toast.makeText(this, "Không tìm thấy tài liệu để cập nhật", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        selectedDocument.title = title;
+        selectedDocument.imageUri = imageUri;
+        documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
+                showProcessDocument();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể cập nhật tài liệu", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void pickDocumentImage() {
         documentImagePickerLauncher.launch(new String[]{"image/*"});
+    }
+
+    private void pickDocumentFile() {
+        documentFilePickerLauncher.launch(new String[]{
+                "application/pdf",
+                "text/plain",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.ms-powerpoint",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "image/*"
+        });
     }
 
     private void captureDocumentImage() {
@@ -443,10 +630,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if (selectedDocumentImageUri == null) {
-            label.setText("Chưa chọn ảnh tài liệu");
+            label.setText("Chưa chọn ảnh hoặc file tài liệu");
             return;
         }
-        label.setText("Đã chọn ảnh tài liệu");
+        label.setText(getDocumentAttachmentLabel(selectedDocumentImageUri.toString()));
     }
 
     private void openDocument(long id) {
@@ -467,22 +654,85 @@ public class MainActivity extends AppCompatActivity {
         applySystemBars();
 
         TextView textDocName = findViewById(R.id.textDocName);
-        EditText editOCRContent = findViewById(R.id.editOCRContent);
+        TextView textContentStatus = findViewById(R.id.textContentStatus);
         ImageView imagePreview = findViewById(R.id.imageDocPreview);
         TextView imagePlaceholder = findViewById(R.id.imageDocThumb);
 
         if (selectedDocument != null) {
             textDocName.setText("Tài liệu: " + selectedDocument.title);
-            editOCRContent.setText(selectedDocument.ocrText);
+            if (isBlank(selectedDocument.ocrText)) {
+                textContentStatus.setText("Chưa quét nội dung. Hãy quét tài liệu trước khi dùng AI.");
+            } else {
+                textContentStatus.setText("Đã có nội dung được quét. Bạn có thể xem nội dung hoặc dùng AI.");
+            }
             showDocumentImage(selectedDocument.imageUri, imagePreview, imagePlaceholder);
         }
 
         bindClick(R.id.backHome, this::showSubjectDetail);
         bindClick(R.id.buttonRunOcr, this::runOcrForCurrentDocument);
-        bindClick(R.id.buttonSaveDoc, this::saveDocumentContent);
+        bindClick(R.id.buttonViewDocumentContent, this::showDocumentContent);
+        bindClick(R.id.buttonEditDocument, () -> {
+            if (selectedDocument != null) {
+                showDocumentForm(selectedDocument.id);
+            }
+        });
         bindClick(R.id.buttonSummary, this::createSummaryFromCurrentDocument);
         bindClick(R.id.buttonQuestions, this::createQuizFromCurrentDocument);
         bindClick(R.id.buttonExplain, this::createSummaryFromCurrentDocument);
+        bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
+    }
+
+    private void showDocumentContent() {
+        if (selectedDocument == null) {
+            showSubjectDetail();
+            return;
+        }
+
+        currentScreen = R.layout.screen_document_content;
+        setContentView(R.layout.screen_document_content);
+        applySystemBars();
+
+        TextView title = findViewById(R.id.textDocumentContentTitle);
+        TextView content = findViewById(R.id.textDocumentContent);
+        title.setText("Nội dung: " + selectedDocument.title);
+        content.setText(isBlank(selectedDocument.ocrText)
+                ? "Chưa có nội dung được quét."
+                : selectedDocument.ocrText);
+
+        bindClick(R.id.backProcessFromContent, this::showProcessDocument);
+    }
+
+    private void confirmDeleteCurrentDocument() {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa tài liệu")
+                .setMessage("Bạn có chắc muốn xóa tài liệu \"" + selectedDocument.title + "\" không?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> deleteCurrentDocument())
+                .show();
+    }
+
+    private void deleteCurrentDocument() {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        documentRepository.delete(selectedDocument, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                selectedDocument = null;
+                Toast.makeText(MainActivity.this, "Đã xóa tài liệu", Toast.LENGTH_SHORT).show();
+                showSubjectDetail();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể xóa tài liệu", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void runOcrForCurrentDocument() {
@@ -492,6 +742,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (isBlank(selectedDocument.imageUri)) {
             Toast.makeText(this, "Tài liệu chưa có ảnh để OCR", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isImageAttachment(selectedDocument.imageUri)) {
+            Toast.makeText(this, "OCR hiện chỉ hỗ trợ ảnh. File này vẫn đã được lưu.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -520,22 +775,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleOcrResult(String recognizedText) {
-        EditText editOCRContent = findViewById(R.id.editOCRContent);
         if (isBlank(recognizedText)) {
             Toast.makeText(this, "Ảnh không có văn bản nhận dạng được", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        editOCRContent.setText(recognizedText);
         selectedDocument.ocrText = recognizedText;
-        Toast.makeText(this, "Đã nhận dạng OCR, hãy kiểm tra rồi lưu", Toast.LENGTH_SHORT).show();
+        documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Quét nội dung tài liệu thành công", Toast.LENGTH_SHORT).show();
+                showProcessDocument();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Quét được nội dung nhưng chưa lưu được", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showDocumentImage(String imageUri, ImageView imagePreview, TextView imagePlaceholder) {
         if (isBlank(imageUri)) {
             imagePreview.setVisibility(View.GONE);
             imagePlaceholder.setVisibility(View.VISIBLE);
-            imagePlaceholder.setText("Chưa có ảnh tài liệu");
+            imagePlaceholder.setText("Chưa có file tài liệu");
+            return;
+        }
+
+        if (!isImageAttachment(imageUri)) {
+            imagePreview.setVisibility(View.GONE);
+            imagePlaceholder.setVisibility(View.VISIBLE);
+            imagePlaceholder.setText(getDocumentAttachmentLabel(imageUri));
             return;
         }
 
@@ -550,16 +821,52 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean isImageAttachment(String attachmentUri) {
+        String mimeType = getAttachmentMimeType(attachmentUri);
+        if (!isBlank(mimeType)) {
+            return mimeType.startsWith("image/");
+        }
+        String lowerUri = attachmentUri == null ? "" : attachmentUri.toLowerCase(Locale.US);
+        return lowerUri.endsWith(".jpg")
+                || lowerUri.endsWith(".jpeg")
+                || lowerUri.endsWith(".png")
+                || lowerUri.endsWith(".webp");
+    }
+
+    private String getDocumentAttachmentLabel(String attachmentUri) {
+        if (isBlank(attachmentUri)) {
+            return "Chưa có file";
+        }
+        String mimeType = getAttachmentMimeType(attachmentUri);
+        if (!isBlank(mimeType)) {
+            if (mimeType.startsWith("image/")) return "Có ảnh tài liệu";
+            if ("application/pdf".equals(mimeType)) return "Có file PDF";
+            if (mimeType.contains("wordprocessingml") || "application/msword".equals(mimeType)) return "Có file Word";
+            if (mimeType.contains("presentationml") || mimeType.contains("powerpoint")) return "Có file PowerPoint";
+            if (mimeType.contains("spreadsheetml") || mimeType.contains("excel")) return "Có file Excel";
+            if (mimeType.startsWith("text/")) return "Có file văn bản";
+        }
+        return "Có file tài liệu";
+    }
+
+    private String getAttachmentMimeType(String attachmentUri) {
+        if (isBlank(attachmentUri)) {
+            return "";
+        }
+        try {
+            String mimeType = getContentResolver().getType(Uri.parse(attachmentUri));
+            return mimeType == null ? "" : mimeType;
+        } catch (Exception exception) {
+            return "";
+        }
+    }
+
     private void saveDocumentContent() {
         if (selectedDocument == null) return;
-        EditText editOCRContent = findViewById(R.id.editOCRContent);
-        String newContent = editOCRContent.getText().toString();
-
-        selectedDocument.ocrText = newContent;
         documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                Toast.makeText(MainActivity.this, "Đã lưu nội dung OCR!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Đã lưu nội dung tài liệu!", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -601,15 +908,13 @@ public class MainActivity extends AppCompatActivity {
     private void createSummaryFromCurrentDocument(){
         if (selectedDocument == null) return;
 
-        EditText editOCRContent = findViewById(R.id.editOCRContent);
-        String ocrText = editOCRContent.getText().toString().trim();
+        String ocrText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
 
         if(isBlank(ocrText)){
-            Toast.makeText(this, "Chưa có nội dung OCR để tóm tắt", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Chưa có nội dung tài liệu để tóm tắt", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        selectedDocument.ocrText = ocrText;
         long documentId = selectedDocument.id;
         documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
             @Override
@@ -666,15 +971,13 @@ public class MainActivity extends AppCompatActivity {
         return;
     }
 
-    EditText editOCRContent = findViewById(R.id.editOCRContent);
-    String ocrText = editOCRContent.getText().toString().trim();
+    String ocrText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
 
     if (isBlank(ocrText)) {
-        Toast.makeText(this, "Chưa có nội dung OCR để tạo quiz", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Chưa có nội dung tài liệu để tạo quiz", Toast.LENGTH_SHORT).show();
         return;
     }
 
-    selectedDocument.ocrText = ocrText;
     long documentId = selectedDocument.id;
     documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
         @Override
