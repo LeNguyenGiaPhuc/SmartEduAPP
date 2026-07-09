@@ -196,12 +196,88 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         applySystemBars();
 
-        findViewById(R.id.cardSubjectMobile).setVisibility(View.GONE);
-        findViewById(R.id.cardSubjectDatabase).setVisibility(View.GONE);
+        bindClick(R.id.buttonOpenHomeMenu, this::showHomeMenu);
+        bindClick(R.id.buttonCloseHomeMenu, this::hideHomeMenu);
+        bindClick(R.id.homeMenuBackdrop, this::hideHomeMenu);
+        bindClick(R.id.buttonSubjectList, () -> {
+            hideHomeMenu();
+            showSubjectList();
+        });
+        bindClick(R.id.buttonLearningHistory, () -> {
+            hideHomeMenu();
+            showHistory();
+        });
+        bindClick(R.id.buttonLogout, () -> {
+            hideHomeMenu();
+            Toast.makeText(this, "Chức năng đăng xuất sẽ dùng khi app có đăng nhập", Toast.LENGTH_SHORT).show();
+        });
+        loadHomeDashboard();
+    }
+
+    private void showHomeMenu() {
+        View backdrop = findViewById(R.id.homeMenuBackdrop);
+        View menu = findViewById(R.id.homeSideMenu);
+        if (backdrop == null || menu == null) {
+            return;
+        }
+
+        backdrop.setAlpha(0f);
+        backdrop.setVisibility(View.VISIBLE);
+        menu.setVisibility(View.VISIBLE);
+        menu.post(() -> {
+            menu.setTranslationX(-menu.getWidth());
+            menu.animate().translationX(0f).setDuration(220).start();
+            backdrop.animate().alpha(1f).setDuration(180).start();
+        });
+    }
+
+    private void hideHomeMenu() {
+        View backdrop = findViewById(R.id.homeMenuBackdrop);
+        View menu = findViewById(R.id.homeSideMenu);
+        if (backdrop == null || menu == null || menu.getVisibility() != View.VISIBLE) {
+            return;
+        }
+
+        menu.animate()
+                .translationX(-menu.getWidth())
+                .setDuration(180)
+                .withEndAction(() -> {
+                    menu.setVisibility(View.GONE);
+                    menu.setTranslationX(0f);
+                })
+                .start();
+        backdrop.animate()
+                .alpha(0f)
+                .setDuration(160)
+                .withEndAction(() -> backdrop.setVisibility(View.GONE))
+                .start();
+    }
+
+    private void loadHomeDashboard() {
+        subjectRepository.getAll(new RepositoryCallback<List<Subject>>() {
+            @Override
+            public void onSuccess(List<Subject> subjects) {
+                syncRecentSubjects(subjects);
+                renderRecentSubjects();
+                loadHomeQuizHistory();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                renderRecentSubjects();
+                loadHomeQuizHistory();
+            }
+        });
+    }
+
+    private void showSubjectList() {
+        currentScreen = R.layout.screen_subject_list;
+        setContentView(R.layout.screen_subject_list);
+        applySystemBars();
+
+        bindClick(R.id.backHomeFromSubjectList, this::showHome);
         bindClick(R.id.buttonAddSubject, () -> showSubjectForm(-1L));
-        bindClick(R.id.buttonLearningHistory, this::showHistory);
         loadSubjects();
-        renderRecentSubjects();
     }
 
     private void loadSubjects() {
@@ -351,6 +427,110 @@ public class MainActivity extends AppCompatActivity {
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
             UiViewFactory.animateIn(card, visibleIndex++);
+        }
+    }
+
+    private void loadHomeQuizHistory() {
+        documentRepository.getAll(new RepositoryCallback<List<StudyDocument>>() {
+            @Override
+            public void onSuccess(List<StudyDocument> documents) {
+                studyRepository.getAllQuizAttempts(new RepositoryCallback<List<QuizAttempt>>() {
+                    @Override
+                    public void onSuccess(List<QuizAttempt> attempts) {
+                        renderHomeQuizHistory(documents, attempts);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        renderHomeQuizHistory(documents, new ArrayList<>());
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                renderHomeQuizHistory(new ArrayList<>(), new ArrayList<>());
+            }
+        });
+    }
+
+    private void renderHomeQuizHistory(List<StudyDocument> documents, List<QuizAttempt> attempts) {
+        LinearLayout container = findViewById(R.id.homeQuizHistoryContainer);
+        TextView empty = findViewById(R.id.emptyHomeQuizHistory);
+        if (container == null || empty == null) {
+            return;
+        }
+
+        container.removeAllViews();
+        empty.setVisibility(attempts.isEmpty() ? View.VISIBLE : View.GONE);
+        if (attempts.isEmpty()) {
+            return;
+        }
+
+        Map<Long, StudyDocument> documentById = new HashMap<>();
+        for (StudyDocument document : documents) {
+            documentById.put(document.id, document);
+        }
+
+        int max = Math.min(3, attempts.size());
+        for (int index = 0; index < max; index++) {
+            QuizAttempt attempt = attempts.get(index);
+            StudyDocument document = documentById.get(attempt.document_id);
+            MaterialCardView card = UiViewFactory.createCard(this);
+            card.setOnClickListener(v -> {
+                if (document == null) {
+                    showHistory();
+                    return;
+                }
+                selectedSubjectId = document.subject_id;
+                selectedDocument = document;
+                latestQuizAttempt = attempt;
+                showHistory();
+            });
+
+            LinearLayout content = new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(
+                    UiViewFactory.dp(this, 16),
+                    UiViewFactory.dp(this, 14),
+                    UiViewFactory.dp(this, 16),
+                    UiViewFactory.dp(this, 14)
+            );
+
+            int total = attempt.correctCount + attempt.wrongCount;
+            TextView title = UiViewFactory.createText(
+                    this,
+                    document == null ? "Quiz tài liệu #" + attempt.document_id : document.title,
+                    16,
+                    R.color.ink,
+                    true
+            );
+            TextView score = UiViewFactory.createText(
+                    this,
+                    attempt.correctCount + "/" + total + " đúng · "
+                            + String.format(Locale.US, "%.1f", attempt.score) + " điểm",
+                    14,
+                    R.color.brand_blue_dark,
+                    true
+            );
+            score.setPadding(0, UiViewFactory.dp(this, 5), 0, 0);
+
+            SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+            TextView time = UiViewFactory.createText(
+                    this,
+                    format.format(new Date(attempt.completedAt)),
+                    13,
+                    R.color.ink_muted,
+                    false
+            );
+            time.setPadding(0, UiViewFactory.dp(this, 5), 0, 0);
+
+            content.addView(title);
+            content.addView(score);
+            content.addView(time);
+            card.addView(content);
+            container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, index);
         }
     }
 
