@@ -1,7 +1,10 @@
 package hcmute.com.smarteduapp.ui.common;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -23,9 +26,45 @@ public final class UiViewFactory {
         card.setStrokeWidth(dp(context, 1));
         card.setRadius(dp(context, 18));
         card.setCardElevation(dp(context, 3));
+        card.setRippleColor(ColorStateList.valueOf(ContextCompat.getColor(context, R.color.ripple_light)));
         card.setClickable(true);
         card.setFocusable(true);
+        applyPressEffect(card);
         return card;
+    }
+
+    public static void applyPressEffect(View view) {
+        view.setOnTouchListener((pressedView, event) -> {
+            if (!pressedView.isEnabled()) {
+                return false;
+            }
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                pressedView.animate()
+                        .scaleX(0.98f)
+                        .scaleY(0.98f)
+                        .setDuration(90)
+                        .start();
+            } else if (event.getAction() == MotionEvent.ACTION_UP
+                    || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                pressedView.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(140)
+                        .start();
+            }
+            return false;
+        });
+    }
+
+    public static void animateIn(View view, int index) {
+        view.setAlpha(0f);
+        view.setTranslationY(dp(view.getContext(), 10));
+        view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(Math.min(index, 6) * 35L)
+                .setDuration(220)
+                .start();
     }
 
     public static TextView createText(Context context, String text, int sizeSp,

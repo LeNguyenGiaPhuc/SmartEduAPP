@@ -212,6 +212,7 @@ public class MainActivity extends AppCompatActivity {
         container.removeAllViews();
         empty.setVisibility(subjects.isEmpty() ? View.VISIBLE : View.GONE);
 
+        int cardIndex = 0;
         for (Subject subject : subjects) {
             MaterialCardView card = UiViewFactory.createCard(this);
             card.setOnClickListener(v -> {
@@ -236,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(description);
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, cardIndex++);
         }
     }
 
@@ -306,6 +308,7 @@ public class MainActivity extends AppCompatActivity {
         empty.setVisibility(recentSubjects.isEmpty() ? View.VISIBLE : View.GONE);
 
         List<Subject> subjects = new ArrayList<>(recentSubjects.values());
+        int visibleIndex = 0;
         for (int index = subjects.size() - 1; index >= 0; index--) {
             Subject subject = subjects.get(index);
             MaterialCardView card = UiViewFactory.createCard(this);
@@ -337,6 +340,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(description);
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, visibleIndex++);
         }
     }
 
@@ -387,6 +391,7 @@ public class MainActivity extends AppCompatActivity {
         container.removeAllViews();
         empty.setVisibility(documents.isEmpty() ? View.VISIBLE : View.GONE);
 
+        int cardIndex = 0;
         for (StudyDocument document : documents) {
             MaterialCardView card = UiViewFactory.createCard(this);
             card.setOnClickListener(v -> openDocument(document.id));
@@ -406,6 +411,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(state);
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, cardIndex++);
         }
     }
 
@@ -756,6 +762,51 @@ public class MainActivity extends AppCompatActivity {
         showAiChat();
     }
 
+    private void ensureCurrentDocumentHasAttachments(String unavailableMessage, Runnable action) {
+        if (selectedDocument == null) {
+            showSubjectDetail();
+            return;
+        }
+
+        long documentId = selectedDocument.id;
+        documentRepository.getById(documentId, new RepositoryCallback<StudyDocument>() {
+            @Override
+            public void onSuccess(StudyDocument document) {
+                if (document == null) {
+                    selectedDocument = null;
+                    selectedDocumentImages = new ArrayList<>();
+                    Toast.makeText(MainActivity.this, "Tài liệu đã bị xóa", Toast.LENGTH_SHORT).show();
+                    showSubjectDetail();
+                    return;
+                }
+
+                documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
+                    @Override
+                    public void onSuccess(List<StudyDocumentImage> images) {
+                        selectedDocument = document;
+                        selectedDocumentImages = images;
+                        if (images.isEmpty()) {
+                            Toast.makeText(MainActivity.this, unavailableMessage, Toast.LENGTH_SHORT).show();
+                            clearGeneratedStateForCurrentDocument(false);
+                            return;
+                        }
+                        action.run();
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Toast.makeText(MainActivity.this, "Không thể kiểm tra file tài liệu", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể kiểm tra tài liệu", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void loadDocumentImages(long documentId) {
         documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
             @Override
@@ -815,10 +866,12 @@ public class MainActivity extends AppCompatActivity {
         if (addButton != null) container.addView(addButton);
 
         if (images.isEmpty()) {
+            setStudyActionsEnabled(false);
             showDocumentImage(null, findViewById(R.id.imageDocPreview), findViewById(R.id.imageDocThumb));
             return;
         }
 
+        setStudyActionsEnabled(true);
         showDocumentImage(images.get(0).imageUri, findViewById(R.id.imageDocPreview), findViewById(R.id.imageDocThumb));
 
         for (StudyDocumentImage image : images) {
@@ -845,6 +898,25 @@ public class MainActivity extends AppCompatActivity {
             });
 
             container.addView(thumb);
+            UiViewFactory.applyPressEffect(thumb);
+            UiViewFactory.animateIn(thumb, container.getChildCount());
+        }
+    }
+
+    private void setStudyActionsEnabled(boolean enabled) {
+        int[] actionIds = {
+                R.id.buttonRunOcr,
+                R.id.buttonSummary,
+                R.id.buttonQuestions,
+                R.id.buttonExplain
+        };
+        float alpha = enabled ? 1f : 0.45f;
+        for (int actionId : actionIds) {
+            View action = findViewById(actionId);
+            if (action != null) {
+                action.setEnabled(enabled);
+                action.animate().alpha(alpha).setDuration(160).start();
+            }
         }
     }
 
@@ -909,6 +981,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showAiChat() {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        ensureCurrentDocumentHasAttachments(
+                "Tài liệu không còn file đính kèm, không thể hỏi đáp AI",
+                this::openAiChatScreen
+        );
+    }
+
+    private void openAiChatScreen() {
         if (selectedDocument == null) {
             return;
         }
@@ -992,7 +1075,7 @@ public class MainActivity extends AppCompatActivity {
                 this,
                 sender,
                 13,
-                isUser ? R.color.brand_blue_dark : R.color.brand_purple,
+                isUser ? R.color.brand_blue_dark : R.color.ink_muted,
                 true
         );
         TextView messageView = UiViewFactory.createText(this, message, 15, R.color.ink, false);
@@ -1002,6 +1085,7 @@ public class MainActivity extends AppCompatActivity {
         content.addView(messageView);
         card.addView(content);
         container.addView(card, UiViewFactory.verticalMargin(this, 10));
+        UiViewFactory.animateIn(card, container.getChildCount());
 
         if (scrollView != null) {
             scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
@@ -1023,13 +1107,76 @@ public class MainActivity extends AppCompatActivity {
             public void onSuccess(Integer result) {
                 Toast.makeText(MainActivity.this, "Đã xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
                 if (selectedDocument != null) {
-                    loadDocumentImages(selectedDocument.id);
+                    refreshAttachmentsAfterDelete(selectedDocument.id);
                 }
             }
 
             @Override
             public void onError(Exception exception) {
                 Toast.makeText(MainActivity.this, "Không thể xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void refreshAttachmentsAfterDelete(long documentId) {
+        documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
+            @Override
+            public void onSuccess(List<StudyDocumentImage> images) {
+                selectedDocumentImages = images;
+                if (images.isEmpty()) {
+                    clearGeneratedStateForCurrentDocument(true);
+                    return;
+                }
+                renderThumbnails(images);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                loadDocumentImages(documentId);
+            }
+        });
+    }
+
+    private void clearGeneratedStateForCurrentDocument(boolean showSuccessMessage) {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        selectedDocument.ocrText = "";
+        latestDisplayedSummary = null;
+        currentQuizQuestions.clear();
+        selectedQuizAnswers.clear();
+        latestQuizAttempt = null;
+        long documentId = selectedDocument.id;
+
+        documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                studyRepository.clearGeneratedDataByDocumentId(documentId, new RepositoryCallback<Integer>() {
+                    @Override
+                    public void onSuccess(Integer deletedCount) {
+                        if (showSuccessMessage) {
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Đã xóa file cuối cùng và dọn OCR/AI/quiz của tài liệu",
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        }
+                        showProcessDocument();
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Toast.makeText(MainActivity.this, "Đã xóa file nhưng chưa dọn được dữ liệu AI/quiz", Toast.LENGTH_SHORT).show();
+                        showProcessDocument();
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể cập nhật trạng thái tài liệu", Toast.LENGTH_SHORT).show();
+                showProcessDocument();
             }
         });
     }
@@ -1263,6 +1410,15 @@ public class MainActivity extends AppCompatActivity {
     private void createSummaryFromCurrentDocument(){
         if (selectedDocument == null) return;
 
+        ensureCurrentDocumentHasAttachments(
+                "Tài liệu không còn file đính kèm, không thể tóm tắt AI",
+                this::createSummaryAfterValidation
+        );
+    }
+
+    private void createSummaryAfterValidation() {
+        if (selectedDocument == null) return;
+
         String ocrText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
 
         if(isBlank(ocrText)){
@@ -1322,6 +1478,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void createQuizFromCurrentDocument() {
+    if (selectedDocument == null) {
+        return;
+    }
+
+    ensureCurrentDocumentHasAttachments(
+            "Tài liệu không còn file đính kèm, không thể tạo quiz",
+            this::createQuizAfterValidation
+    );
+    }
+
+    private void createQuizAfterValidation() {
     if (selectedDocument == null) {
         return;
     }
@@ -1425,7 +1592,7 @@ public class MainActivity extends AppCompatActivity {
                 new RepositoryCallback<Integer>() {
                     @Override
                     public void onSuccess(Integer result) {
-                        showQuestionBank();
+                        renderQuestionBankScreen();
                     }
 
                     @Override
@@ -1467,6 +1634,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showQuestionBank() {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        ensureCurrentDocumentHasAttachments(
+                "Tài liệu không còn file đính kèm, không thể mở bộ câu hỏi",
+                this::renderQuestionBankScreen
+        );
+    }
+
+    private void renderQuestionBankScreen() {
         currentScreen = R.layout.screen_question_bank;
         setContentView(R.layout.screen_question_bank);
         applySystemBars();
@@ -1595,13 +1773,15 @@ public class MainActivity extends AppCompatActivity {
             editAction.setGravity(android.view.Gravity.CENTER);
             editAction.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8),
                     UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8));
+            UiViewFactory.applyPressEffect(editAction);
             editAction.setOnClickListener(v -> showQuestionEditor(question));
 
-            TextView deleteAction = UiViewFactory.createText(this, "Xóa", 13, R.color.brand_orange, true);
+            TextView deleteAction = UiViewFactory.createText(this, "Xóa", 13, R.color.danger, true);
             deleteAction.setBackgroundResource(R.drawable.bg_action_chip_danger);
             deleteAction.setGravity(android.view.Gravity.CENTER);
             deleteAction.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8),
                     UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8));
+            UiViewFactory.applyPressEffect(deleteAction);
             deleteAction.setOnClickListener(v -> confirmDeleteQuestion(question));
 
             LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(
@@ -1623,6 +1803,7 @@ public class MainActivity extends AppCompatActivity {
 
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, container.getChildCount());
         }
     }
 
@@ -1874,6 +2055,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(answers);
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, container.getChildCount());
         }
     }
 
@@ -2045,6 +2227,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(detail);
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
+            UiViewFactory.animateIn(card, container.getChildCount());
         }
     }
 
@@ -2097,11 +2280,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void bindClick(int viewId, Runnable action) {
         View view = findViewById(viewId);
-        if (view != null) view.setOnClickListener(v -> action.run());
+        if (view != null) {
+            UiViewFactory.applyPressEffect(view);
+            view.setOnClickListener(v -> action.run());
+        }
     }
 
     private void applySystemBars() {
         View root = findViewById(R.id.main);
+        animateScreenEnter(root);
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             Insets systemBars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
@@ -2110,5 +2297,18 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
         ViewCompat.requestApplyInsets(root);
+    }
+
+    private void animateScreenEnter(View root) {
+        if (root == null) {
+            return;
+        }
+        root.setAlpha(0f);
+        root.setTranslationY(UiViewFactory.dp(this, 10));
+        root.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(240)
+                .start();
     }
 }

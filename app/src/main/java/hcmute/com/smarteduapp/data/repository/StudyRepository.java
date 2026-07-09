@@ -122,6 +122,21 @@ public class StudyRepository {
         });
     }
 
+    public void clearGeneratedDataByDocumentId(long documentId, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int deletedCount = 0;
+                deletedCount += summaryDao.deleteByDocumentId(documentId);
+                deletedCount += questionDao.deleteByDocumentId(documentId);
+                deletedCount += quizAttemptDao.deleteByDocumentId(documentId);
+                int result = deletedCount;
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
     public void createQuizAttempt(QuizAttempt attempt, RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {

@@ -52,7 +52,7 @@
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="24dp"
             app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
+            app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
             <LinearLayout

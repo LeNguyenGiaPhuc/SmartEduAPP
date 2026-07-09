@@ -18,4 +18,7 @@ public interface QuizAttemptDao {
 
     @Insert
     long insert(QuizAttempt attempt);
+
+    @Query("DELETE FROM quiz_attempts WHERE document_id = :documentId")
+    int deleteByDocumentId(long documentId);
 }

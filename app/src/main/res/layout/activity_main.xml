@@ -117,7 +117,7 @@
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="20dp"
             app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
+            app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -191,7 +191,7 @@
                     android:background="@drawable/bg_document_thumb"
                     android:gravity="center"
                     android:text="CSDL"
-                    android:textColor="#7B5B24"
+                    android:textColor="@color/ink_muted"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 

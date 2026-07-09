@@ -111,7 +111,7 @@
             android:focusable="true"
             android:gravity="center"
             android:text="Xóa môn học"
-            android:textColor="#B56B00"
+            android:textColor="@color/danger"
             android:textStyle="bold" />
     </LinearLayout>
 </ScrollView>

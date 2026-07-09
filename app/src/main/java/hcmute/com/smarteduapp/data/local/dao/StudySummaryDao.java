@@ -19,4 +19,7 @@ public interface StudySummaryDao {
 
     @Delete
     int delete(StudySummary summary);
+
+    @Query("DELETE FROM summaries WHERE document_id = :documentId")
+    int deleteByDocumentId(long documentId);
 }

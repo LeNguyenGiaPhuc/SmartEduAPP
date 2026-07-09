@@ -53,7 +53,7 @@
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="20dp"
             app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
+            app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -90,7 +90,7 @@
             app:cardBackgroundColor="@color/paper"
             app:cardCornerRadius="20dp"
             app:cardElevation="4dp"
-            app:strokeColor="@color/brand_blue"
+            app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -142,7 +142,7 @@
             android:focusable="true"
             android:gravity="center"
             android:text="Xóa kết quả AI này"
-            android:textColor="#C64646"
+            android:textColor="@color/danger"
             android:textSize="14sp"
             android:textStyle="bold" />
     </LinearLayout>
