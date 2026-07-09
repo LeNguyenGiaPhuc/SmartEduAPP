@@ -61,6 +61,17 @@ public class StudyRepository {
         });
     }
 
+    public void getAllSummaries(RepositoryCallback<List<StudySummary>> callback) {
+        executor.execute(() -> {
+            try {
+                List<StudySummary> summaries = summaryDao.getAll();
+                mainHandler.post(() -> callback.onSuccess(summaries));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
     public void replaceQuestions(long documentId, List<StudyQuestion> questions, RepositoryCallback<Integer> callback) {
     executor.execute(() -> {
         try {
@@ -87,6 +98,17 @@ public class StudyRepository {
             mainHandler.post(() -> callback.onError(exception));
         }
     });
+    }
+
+    public void getAllQuestions(RepositoryCallback<List<StudyQuestion>> callback) {
+        executor.execute(() -> {
+            try {
+                List<StudyQuestion> questions = questionDao.getAll();
+                mainHandler.post(() -> callback.onSuccess(questions));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
     }
 
     public void updateQuestion(StudyQuestion question, RepositoryCallback<Integer> callback) {

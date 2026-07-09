@@ -15,6 +15,9 @@ public interface StudyQuestionDao {
     @Query("SELECT * FROM questions WHERE document_id = :documentId ORDER BY questionOrder, id")
     List<StudyQuestion> getByDocumentId(long documentId);
 
+    @Query("SELECT * FROM questions ORDER BY document_id, questionOrder, id")
+    List<StudyQuestion> getAll();
+
     @Insert
     long insert(StudyQuestion question);
 

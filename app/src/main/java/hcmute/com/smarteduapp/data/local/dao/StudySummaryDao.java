@@ -14,6 +14,9 @@ public interface StudySummaryDao {
     @Query("SELECT * FROM summaries WHERE document_id = :documentId ORDER BY createdAt DESC")
     List<StudySummary> getByDocumentId(long documentId);
 
+    @Query("SELECT * FROM summaries ORDER BY createdAt DESC")
+    List<StudySummary> getAll();
+
     @Insert
     long insert(StudySummary summary);
 

@@ -42,6 +42,20 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/buttonLearningHistory"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_badge_blue"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="LS"
+                android:textColor="@color/brand_blue_dark"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
                 android:layout_width="42dp"
                 android:layout_height="42dp"
                 android:background="@drawable/bg_avatar"

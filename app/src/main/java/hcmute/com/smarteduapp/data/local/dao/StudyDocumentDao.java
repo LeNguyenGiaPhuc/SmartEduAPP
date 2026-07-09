@@ -15,6 +15,9 @@ public interface StudyDocumentDao {
     @Query("SELECT * FROM documents WHERE subject_id = :subjectId ORDER BY updatedAt DESC")
     List<StudyDocument> getBySubjectId(long subjectId);
 
+    @Query("SELECT * FROM documents ORDER BY updatedAt DESC")
+    List<StudyDocument> getAll();
+
     @Query("SELECT * FROM documents WHERE id = :id LIMIT 1")
     StudyDocument getById(long id);
 

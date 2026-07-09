@@ -38,6 +38,17 @@ public class DocumentRepository {
         });
     }
 
+    public void getAll(RepositoryCallback<List<StudyDocument>> callback) {
+        executor.execute(() -> {
+            try {
+                List<StudyDocument> documents = documentDao.getAll();
+                mainHandler.post(() -> callback.onSuccess(documents));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
     public void create(long subjectId, String title, RepositoryCallback<Long> callback) {
         create(subjectId, title, null, callback);
     }
