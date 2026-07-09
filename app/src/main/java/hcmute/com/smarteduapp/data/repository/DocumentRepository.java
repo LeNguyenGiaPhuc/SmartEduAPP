@@ -94,6 +94,12 @@ public class DocumentRepository {
         executor.execute(() -> {
             try {
                 List<StudyDocumentImage> existing = imageDao.getByDocumentId(documentId);
+                for (StudyDocumentImage image : existing) {
+                    if (image.imageUri != null && image.imageUri.equals(imageUri)) {
+                        mainHandler.post(() -> callback.onSuccess(image.id));
+                        return;
+                    }
+                }
                 StudyDocumentImage image = new StudyDocumentImage(
                         documentId, imageUri, "", existing.size(), System.currentTimeMillis()
                 );

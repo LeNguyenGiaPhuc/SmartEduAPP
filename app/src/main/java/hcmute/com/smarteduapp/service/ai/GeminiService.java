@@ -231,6 +231,73 @@ public class GeminiService {
         }
     }
 
+    public void askAboutDocument(String documentText, String question, GeminiCallback callback) {
+        if (BuildConfig.GEMINI_API_KEY.trim().isEmpty()) {
+            callback.onError(new IllegalStateException("Missing Gemini API key"));
+            return;
+        }
+
+        try {
+            String prompt = buildDocumentQuestionPrompt(documentText, question);
+
+            JSONObject requestJson = new JSONObject()
+                    .put("contents", new JSONArray()
+                            .put(new JSONObject()
+                                    .put("parts", new JSONArray()
+                                            .put(new JSONObject()
+                                                    .put("text", prompt)))));
+
+            String url = String.format(API_URL, BuildConfig.GEMINI_MODEL, BuildConfig.GEMINI_API_KEY);
+
+            RequestBody body = RequestBody.create(requestJson.toString(), JSON);
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException exception) {
+                    callback.onError(exception);
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) {
+                    String responseText = "";
+
+                    try {
+                        ResponseBody responseBody = response.body();
+                        if (responseBody != null) {
+                            responseText = responseBody.string();
+                        }
+
+                        if (!response.isSuccessful()) {
+                            throw new IOException("Gemini API error: " + response.code() + " " + responseText);
+                        }
+
+                        JSONObject json = new JSONObject(responseText);
+                        String answer = json
+                                .getJSONArray("candidates")
+                                .getJSONObject(0)
+                                .getJSONObject("content")
+                                .getJSONArray("parts")
+                                .getJSONObject(0)
+                                .getString("text");
+
+                        callback.onSuccess(answer.trim());
+                    } catch (Exception exception) {
+                        callback.onError(exception);
+                    } finally {
+                        response.close();
+                    }
+                }
+            });
+        } catch (Exception exception) {
+            callback.onError(exception);
+        }
+    }
+
     private String buildSummaryPrompt(String ocrText) {
         return "Bạn là trợ lý học tập cho học sinh/sinh viên.\n"
                 + "Hãy tóm tắt nội dung OCR sau thành 3 đến 5 ý chính bằng tiếng Việt.\n"
@@ -246,6 +313,16 @@ public class GeminiService {
                 + "Hãy chia nội dung thành các phần nhỏ có tiêu đề rõ ràng.\n\n"
                 + "Nội dung OCR:\n"
                 + ocrText;
+    }
+
+    private String buildDocumentQuestionPrompt(String documentText, String question) {
+        return "Bạn là chatbot học tập trong app SmartEdu AI.\n"
+                + "Chỉ trả lời dựa trên nội dung tài liệu bên dưới. Nếu tài liệu không đủ thông tin, hãy nói rõ là tài liệu chưa cung cấp thông tin đó.\n"
+                + "Trả lời bằng tiếng Việt, ngắn gọn, dễ hiểu, có ví dụ nếu cần.\n\n"
+                + "Nội dung tài liệu:\n"
+                + documentText
+                + "\n\nCâu hỏi của người học:\n"
+                + question;
     }
 
     private String buildQuizPrompt(String ocrText) {

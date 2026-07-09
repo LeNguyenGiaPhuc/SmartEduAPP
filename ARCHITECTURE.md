@@ -15,7 +15,9 @@ app/src/main/java/hcmute/com/smarteduapp/
 |       `-- study/        Summary, questions, quiz and history rules
 |-- service/
 |   |-- image/            Camera, gallery and image URI integration
+|   |-- document/         Document text scanning for images, text files and PDFs
 |   |-- ocr/              Google ML Kit text recognition
+|   |-- study/            Quiz parsing and scoring services
 |   `-- ai/               AI API, prompts and JSON DTOs
 `-- ui/
     |-- common/           Reusable UI helpers
@@ -33,8 +35,10 @@ app/src/main/java/hcmute/com/smarteduapp/
 - `data/repository`: The boundary between UI and Room. Database work runs off the main thread.
 - `domain/usecase`: Business rules that coordinate repositories and services.
 - `service/image`: Camera/gallery integration and image URI handling.
+- `service/document`: Detects document attachment types and extracts text from images, text files and PDFs.
 - `service/ocr`: OCR provider integration.
 - `service/ai`: AI requests, prompts and structured JSON responses.
+- `service/study`: AI quiz parsing and quiz scoring logic that should not live in UI code.
 - `ui/common`: Shared view-building utilities.
 - `ui/main`: Displays screens, receives user input, and calls repositories.
 - `ui/subject`, `ui/document`, `ui/study`: Feature-specific presentation code.

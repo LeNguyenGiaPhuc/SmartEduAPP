@@ -89,6 +89,39 @@ public class StudyRepository {
     });
     }
 
+    public void updateQuestion(StudyQuestion question, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int result = questionDao.update(question);
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void deleteSummary(StudySummary summary, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int result = summaryDao.delete(summary);
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void deleteQuestion(StudyQuestion question, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int result = questionDao.delete(question);
+                mainHandler.post(() -> callback.onSuccess(result));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
     public void createQuizAttempt(QuizAttempt attempt, RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {

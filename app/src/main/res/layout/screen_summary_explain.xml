@@ -131,5 +131,19 @@
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/buttonDeleteSummary"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_action_chip_danger"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="Xóa kết quả AI này"
+            android:textColor="#C64646"
+            android:textSize="14sp"
+            android:textStyle="bold" />
     </LinearLayout>
 </ScrollView>

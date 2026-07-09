@@ -23,7 +23,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/backProcessFromContent"
+                android:id="@+id/backContentFromEdit"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:background="@drawable/bg_pill"
@@ -35,14 +35,14 @@
                 android:textSize="34sp" />
 
             <TextView
-                android:id="@+id/textDocumentContentTitle"
+                android:id="@+id/textEditContentTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:ellipsize="end"
                 android:maxLines="2"
-                android:text="Nội dung bài học"
+                android:text="Sửa nội dung"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -58,30 +58,33 @@
             app:strokeColor="@color/line_soft"
             app:strokeWidth="1dp">
 
-            <TextView
-                android:id="@+id/textDocumentContent"
+            <EditText
+                android:id="@+id/editDocumentContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                android:gravity="top"
+                android:hint="Nhập hoặc chỉnh sửa nội dung đã quét..."
+                android:inputType="textMultiLine"
                 android:lineSpacingExtra="5dp"
-                android:minHeight="560dp"
+                android:minHeight="500dp"
                 android:padding="18dp"
-                android:text="Chưa có nội dung được quét."
                 android:textColor="@color/ink"
                 android:textSize="16sp" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
-            android:id="@+id/buttonEditDocumentContent"
+            android:id="@+id/buttonSaveDocumentContent"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginTop="16dp"
+            android:layout_height="58dp"
+            android:layout_marginTop="18dp"
             android:background="@drawable/bg_button_blue"
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Sửa nội dung"
+            android:text="Lưu nội dung"
             android:textColor="@color/white"
-            android:textSize="16sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
     </LinearLayout>
 </ScrollView>

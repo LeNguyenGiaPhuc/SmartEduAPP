@@ -97,6 +97,7 @@
                     android:backgroundTint="@color/surface_soft"
                     android:gravity="center"
                     android:text="+"
+                    android:contentDescription="Thêm tài liệu đính kèm"
                     android:textColor="@color/brand_blue_dark"
                     android:textSize="24sp"
                     android:textStyle="bold" />
@@ -222,7 +223,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Giải thích AI"
+            android:text="Hỏi đáp AI"
             android:textColor="@color/white"
             android:textSize="16sp"
             android:textStyle="bold" />

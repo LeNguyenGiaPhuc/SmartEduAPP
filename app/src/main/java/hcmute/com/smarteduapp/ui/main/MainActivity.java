@@ -10,11 +10,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
@@ -51,7 +49,10 @@ import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 import hcmute.com.smarteduapp.data.repository.StudyRepository;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.service.ai.GeminiService;
+import hcmute.com.smarteduapp.service.document.DocumentTextScannerService;
 import hcmute.com.smarteduapp.service.ocr.MlKitOcrService;
+import hcmute.com.smarteduapp.service.study.QuizParser;
+import hcmute.com.smarteduapp.service.study.QuizScoringService;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 
@@ -68,10 +69,14 @@ public class MainActivity extends AppCompatActivity {
     private StudyDocument selectedDocument;
     private GeminiService geminiService;
     private MlKitOcrService ocrService;
+    private DocumentTextScannerService documentTextScannerService;
+    private QuizParser quizParser;
+    private QuizScoringService quizScoringService;
     private List<StudyQuestion> currentQuizQuestions = new ArrayList<>();
     private final Map<Long, String> selectedQuizAnswers = new HashMap<>();
     private final LinkedHashMap<Long, Subject> recentSubjects = new LinkedHashMap<>();
     private QuizAttempt latestQuizAttempt;
+    private StudySummary latestDisplayedSummary;
     private Uri selectedDocumentImageUri;
     private Uri pendingCameraImageUri;
     private ActivityResultLauncher<String[]> documentImagePickerLauncher;
@@ -89,6 +94,9 @@ public class MainActivity extends AppCompatActivity {
         studyRepository = new StudyRepository(this);
         geminiService = new GeminiService();
         ocrService = new MlKitOcrService();
+        documentTextScannerService = new DocumentTextScannerService(ocrService);
+        quizParser = new QuizParser();
+        quizScoringService = new QuizScoringService();
         registerImageLaunchers();
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -388,9 +396,7 @@ public class MainActivity extends AppCompatActivity {
                     UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 15));
             content.addView(UiViewFactory.createText(this, document.title, 16,
                     R.color.ink, true));
-            String imageState = isBlank(document.imageUri)
-                    ? "Chưa có file"
-                    : getDocumentAttachmentLabel(document.imageUri);
+            String imageState = "Tài liệu đính kèm";
             String ocrState = isBlank(document.ocrText) ? "Chưa có nội dung OCR" : "Đã lưu nội dung OCR";
             TextView state = UiViewFactory.createText(this,
                     imageState + " · " + ocrState,
@@ -532,9 +538,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (isEditing && selectedDocument != null) {
             titleInput.setText(selectedDocument.title);
-            if (!isBlank(selectedDocument.imageUri)) {
-                selectedDocumentImageUri = Uri.parse(selectedDocument.imageUri);
-            }
         }
 
         updateSelectedImageLabel();
@@ -564,10 +567,25 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        documentRepository.create(selectedSubjectId, title, imageUri, new RepositoryCallback<Long>() {
+        documentRepository.create(selectedSubjectId, title, null, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
-                showSubjectDetail();
+                if (isBlank(imageUri)) {
+                    showSubjectDetail();
+                    return;
+                }
+                documentRepository.addImage(id, imageUri, new RepositoryCallback<Long>() {
+                    @Override
+                    public void onSuccess(Long imageId) {
+                        showSubjectDetail();
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Toast.makeText(MainActivity.this, "Đã lưu tài liệu nhưng chưa lưu được file", Toast.LENGTH_SHORT).show();
+                        showSubjectDetail();
+                    }
+                });
             }
 
             @Override
@@ -585,12 +603,28 @@ public class MainActivity extends AppCompatActivity {
         }
 
         selectedDocument.title = title;
-        selectedDocument.imageUri = imageUri;
+        selectedDocument.imageUri = null;
         documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                Toast.makeText(MainActivity.this, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
-                showProcessDocument();
+                if (isBlank(imageUri)) {
+                    Toast.makeText(MainActivity.this, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
+                    showProcessDocument();
+                    return;
+                }
+                documentRepository.addImage(documentId, imageUri, new RepositoryCallback<Long>() {
+                    @Override
+                    public void onSuccess(Long imageId) {
+                        selectedDocumentImageUri = null;
+                        Toast.makeText(MainActivity.this, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
+                        showProcessDocument();
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Toast.makeText(MainActivity.this, "Không thể thêm file vào tài liệu", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
             @Override
@@ -689,7 +723,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 textContentStatus.setText("Đã có nội dung được quét. Bạn có thể xem nội dung hoặc dùng AI.");
             }
-            showDocumentImage(selectedDocument.imageUri, imagePreview, imagePlaceholder);
+            showDocumentImage(null, imagePreview, imagePlaceholder);
             loadDocumentImages(selectedDocument.id);
         }
 
@@ -703,45 +737,71 @@ public class MainActivity extends AppCompatActivity {
         });
         bindClick(R.id.buttonSummary, this::createSummaryFromCurrentDocument);
         bindClick(R.id.buttonQuestions, this::createQuizFromCurrentDocument);
-        bindClick(R.id.buttonExplain, this::createExplanationFromCurrentDocument);
+        bindClick(R.id.buttonExplain, this::showAiChat);
         bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
-        bindClick(R.id.buttonAddMoreImages, () -> addMoreImagesPickerLauncher.launch(new String[]{"image/*", "application/pdf"}));
+        bindClick(R.id.buttonAddMoreImages, () -> addMoreImagesPickerLauncher.launch(new String[]{
+                "image/*",
+                "application/pdf",
+                "text/plain",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.ms-powerpoint",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }));
     }
 
     private void createExplanationFromCurrentDocument() {
-        if (selectedDocument == null) return;
-
-        String ocrText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
-        if (isBlank(ocrText)) {
-            Toast.makeText(this, "Chưa có nội dung tài liệu để giải thích", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        long documentId = selectedDocument.id;
-        Toast.makeText(this, "Đang giải thích bằng Gemini...", Toast.LENGTH_SHORT).show();
-
-        geminiService.explain(ocrText, new GeminiService.GeminiCallback() {
-            @Override
-            public void onSuccess(String result) {
-                runOnUiThread(() -> saveGeneratedSummary(result, documentId));
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Lỗi giải thích: " + exception.getMessage(), Toast.LENGTH_SHORT).show());
-            }
-        });
+        showAiChat();
     }
 
     private void loadDocumentImages(long documentId) {
         documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
             @Override
             public void onSuccess(List<StudyDocumentImage> images) {
+                if (selectedDocument != null && !isBlank(selectedDocument.imageUri)) {
+                    migrateLegacyDocumentAttachment(images);
+                    return;
+                }
                 selectedDocumentImages = images;
                 renderThumbnails(images);
             }
             @Override
             public void onError(Exception e) {}
+        });
+    }
+
+    private void migrateLegacyDocumentAttachment(List<StudyDocumentImage> existingImages) {
+        if (selectedDocument == null || isBlank(selectedDocument.imageUri)) {
+            selectedDocumentImages = existingImages;
+            renderThumbnails(existingImages);
+            return;
+        }
+
+        String legacyUri = selectedDocument.imageUri;
+        documentRepository.addImage(selectedDocument.id, legacyUri, new RepositoryCallback<Long>() {
+            @Override
+            public void onSuccess(Long id) {
+                selectedDocument.imageUri = null;
+                documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+                    @Override
+                    public void onSuccess(Integer result) {
+                        loadDocumentImages(selectedDocument.id);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        loadDocumentImages(selectedDocument.id);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                selectedDocumentImages = existingImages;
+                renderThumbnails(existingImages);
+            }
         });
     }
 
@@ -753,6 +813,13 @@ public class MainActivity extends AppCompatActivity {
         View addButton = findViewById(R.id.buttonAddMoreImages);
         container.removeAllViews();
         if (addButton != null) container.addView(addButton);
+
+        if (images.isEmpty()) {
+            showDocumentImage(null, findViewById(R.id.imageDocPreview), findViewById(R.id.imageDocThumb));
+            return;
+        }
+
+        showDocumentImage(images.get(0).imageUri, findViewById(R.id.imageDocPreview), findViewById(R.id.imageDocThumb));
 
         for (StudyDocumentImage image : images) {
             ImageView thumb = new ImageView(this);
@@ -773,21 +840,7 @@ public class MainActivity extends AppCompatActivity {
             thumb.setOnClickListener(v -> showDocumentImage(image.imageUri, findViewById(R.id.imageDocPreview), findViewById(R.id.imageDocThumb)));
             
             thumb.setOnLongClickListener(v -> {
-                new AlertDialog.Builder(this)
-                        .setTitle("Xóa ảnh")
-                        .setMessage("Bạn có muốn xóa ảnh này không?")
-                        .setPositiveButton("Xóa", (dialog, which) -> {
-                            documentRepository.deleteImage(image, new RepositoryCallback<Integer>() {
-                                @Override
-                                public void onSuccess(Integer result) {
-                                    loadDocumentImages(selectedDocument.id);
-                                }
-                                @Override
-                                public void onError(Exception e) {}
-                            });
-                        })
-                        .setNegativeButton("Hủy", null)
-                        .show();
+                confirmDeleteAttachment(image);
                 return true;
             });
 
@@ -813,6 +866,179 @@ public class MainActivity extends AppCompatActivity {
                 : selectedDocument.ocrText);
 
         bindClick(R.id.backProcessFromContent, this::showProcessDocument);
+        bindClick(R.id.buttonEditDocumentContent, this::showEditDocumentContent);
+    }
+
+    private void showEditDocumentContent() {
+        if (selectedDocument == null) {
+            showSubjectDetail();
+            return;
+        }
+
+        currentScreen = R.layout.screen_document_content_edit;
+        setContentView(R.layout.screen_document_content_edit);
+        applySystemBars();
+
+        TextView title = findViewById(R.id.textEditContentTitle);
+        EditText contentInput = findViewById(R.id.editDocumentContent);
+        title.setText("Sửa nội dung: " + selectedDocument.title);
+        contentInput.setText(selectedDocument.ocrText == null ? "" : selectedDocument.ocrText);
+
+        bindClick(R.id.backContentFromEdit, this::showDocumentContent);
+        bindClick(R.id.buttonSaveDocumentContent, () -> saveEditedDocumentContent(contentInput));
+    }
+
+    private void saveEditedDocumentContent(EditText contentInput) {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        selectedDocument.ocrText = contentInput.getText().toString().trim();
+        documentRepository.update(selectedDocument, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Đã lưu nội dung tài liệu", Toast.LENGTH_SHORT).show();
+                showDocumentContent();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể lưu nội dung", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showAiChat() {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        String documentText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
+        if (isBlank(documentText)) {
+            Toast.makeText(this, "Chưa có nội dung tài liệu để hỏi đáp", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        currentScreen = R.layout.screen_ai_chat;
+        setContentView(R.layout.screen_ai_chat);
+        applySystemBars();
+
+        TextView title = findViewById(R.id.textAiChatTitle);
+        title.setText("Hỏi đáp: " + selectedDocument.title);
+        addChatMessage("AI", "Bạn có thể hỏi về nội dung tài liệu này. Mình sẽ trả lời dựa trên phần đã quét.", false);
+
+        EditText input = findViewById(R.id.inputAiQuestion);
+        bindClick(R.id.backProcessFromChat, this::showProcessDocument);
+        bindClick(R.id.buttonSendAiQuestion, () -> sendAiQuestion(input));
+    }
+
+    private void sendAiQuestion(EditText input) {
+        if (selectedDocument == null) {
+            return;
+        }
+
+        String question = input.getText().toString().trim();
+        String documentText = selectedDocument.ocrText == null ? "" : selectedDocument.ocrText.trim();
+        if (isBlank(question)) {
+            input.setError("Nhập câu hỏi");
+            return;
+        }
+        if (isBlank(documentText)) {
+            Toast.makeText(this, "Chưa có nội dung tài liệu để hỏi đáp", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        input.setText("");
+        addChatMessage("Bạn", question, true);
+        addChatMessage("AI", "Đang suy nghĩ...", false);
+
+        geminiService.askAboutDocument(documentText, question, new GeminiService.GeminiCallback() {
+            @Override
+            public void onSuccess(String text) {
+                runOnUiThread(() -> {
+                    removeLastChatMessage();
+                    addChatMessage("AI", isBlank(text) ? "Mình chưa tìm thấy câu trả lời phù hợp trong tài liệu." : text, false);
+                });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                runOnUiThread(() -> {
+                    removeLastChatMessage();
+                    addChatMessage("AI", "Không thể trả lời lúc này. Kiểm tra API key hoặc kết nối mạng.", false);
+                });
+            }
+        });
+    }
+
+    private void addChatMessage(String sender, String message, boolean isUser) {
+        LinearLayout container = findViewById(R.id.chatMessagesContainer);
+        ScrollView scrollView = findViewById(R.id.chatScrollView);
+        if (container == null) {
+            return;
+        }
+
+        MaterialCardView card = UiViewFactory.createCard(this);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(
+                UiViewFactory.dp(this, 14),
+                UiViewFactory.dp(this, 12),
+                UiViewFactory.dp(this, 14),
+                UiViewFactory.dp(this, 12)
+        );
+
+        TextView senderView = UiViewFactory.createText(
+                this,
+                sender,
+                13,
+                isUser ? R.color.brand_blue_dark : R.color.brand_purple,
+                true
+        );
+        TextView messageView = UiViewFactory.createText(this, message, 15, R.color.ink, false);
+        messageView.setPadding(0, UiViewFactory.dp(this, 6), 0, 0);
+
+        content.addView(senderView);
+        content.addView(messageView);
+        card.addView(content);
+        container.addView(card, UiViewFactory.verticalMargin(this, 10));
+
+        if (scrollView != null) {
+            scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+        }
+    }
+
+    private void confirmDeleteAttachment(StudyDocumentImage image) {
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa tài liệu đính kèm")
+                .setMessage("Bạn có muốn xóa file/ảnh này khỏi bài học không?")
+                .setPositiveButton("Xóa", (dialog, which) -> deleteAttachment(image))
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void deleteAttachment(StudyDocumentImage image) {
+        documentRepository.deleteImage(image, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Đã xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
+                if (selectedDocument != null) {
+                    loadDocumentImages(selectedDocument.id);
+                }
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void removeLastChatMessage() {
+        LinearLayout container = findViewById(R.id.chatMessagesContainer);
+        if (container != null && container.getChildCount() > 0) {
+            container.removeViewAt(container.getChildCount() - 1);
+        }
     }
 
     private void confirmDeleteCurrentDocument() {
@@ -853,47 +1079,37 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        List<String> urisToOcr = new ArrayList<>();
-        if (!isBlank(selectedDocument.imageUri) && isImageAttachment(selectedDocument.imageUri)) {
-            urisToOcr.add(selectedDocument.imageUri);
-        }
+        List<String> attachmentUris = new ArrayList<>();
         for (StudyDocumentImage img : selectedDocumentImages) {
-            if (isImageAttachment(img.imageUri)) {
-                urisToOcr.add(img.imageUri);
+            if (!isBlank(img.imageUri)) {
+                attachmentUris.add(img.imageUri);
             }
         }
 
-        if (urisToOcr.isEmpty()) {
-            Toast.makeText(this, "Tài liệu chưa có ảnh hợp lệ để OCR", Toast.LENGTH_SHORT).show();
+        if (attachmentUris.isEmpty()) {
+            Toast.makeText(this, "Tài liệu chưa có ảnh/file hợp lệ để quét", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Toast.makeText(this, "Đang nhận dạng OCR " + urisToOcr.size() + " ảnh...", Toast.LENGTH_SHORT).show();
-        processOcrQueue(urisToOcr, 0, new StringBuilder());
-    }
-
-    private void processOcrQueue(List<String> uris, int index, StringBuilder resultBuilder) {
-        if (index >= uris.size()) {
-            runOnUiThread(() -> handleOcrResult(resultBuilder.toString()));
-            return;
-        }
-
-        ocrService.recognizeText(
+        Toast.makeText(this, "Đang quét nội dung tài liệu...", Toast.LENGTH_SHORT).show();
+        documentTextScannerService.scanAttachments(
                 this,
-                Uri.parse(uris.get(index)),
-                new MlKitOcrService.OcrCallback() {
+                attachmentUris,
+                new DocumentTextScannerService.ScanCallback() {
                     @Override
-                    public void onSuccess(String recognizedText) {
-                        if (!isBlank(recognizedText)) {
-                            if (resultBuilder.length() > 0) resultBuilder.append("\n\n");
-                            resultBuilder.append(recognizedText);
-                        }
-                        processOcrQueue(uris, index + 1, resultBuilder);
+                    public void onSuccess(String text) {
+                        runOnUiThread(() -> handleOcrResult(text));
                     }
 
                     @Override
                     public void onError(Exception exception) {
-                        processOcrQueue(uris, index + 1, resultBuilder);
+                        runOnUiThread(() -> Toast.makeText(
+                                MainActivity.this,
+                                exception.getMessage() == null
+                                        ? "Không thể quét nội dung tài liệu"
+                                        : exception.getMessage(),
+                                Toast.LENGTH_SHORT
+                        ).show());
                     }
                 }
         );
@@ -1002,6 +1218,7 @@ public class MainActivity extends AppCompatActivity {
         applySystemBars();
         bindClick(R.id.backProcess, this::showProcessDocument);
         bindClick(R.id.buttonStartQuiz, this::showQuestionBank);
+        bindClick(R.id.buttonDeleteSummary, this::confirmDeleteDisplayedSummary);
 
         loadSummaryFromDatabase();
     }
@@ -1017,11 +1234,13 @@ public class MainActivity extends AppCompatActivity {
                 TextView resultHeader = findViewById(R.id.textResultHeader);
 
                 if(summaries.isEmpty()){
+                    latestDisplayedSummary = null;
                     summaryText.setText("Chưa có nội dung AI. Hãy tạo tóm tắt hoặc giải thích!");
                     return;
                 }
 
                 StudySummary latestSummary = summaries.get(0);
+                latestDisplayedSummary = latestSummary;
                 summaryText.setText(latestSummary.content);
                 
                 // Heuristic to decide title
@@ -1148,7 +1367,7 @@ public class MainActivity extends AppCompatActivity {
                                     Toast.LENGTH_SHORT
                             ).show();
                             saveGeneratedQuestions(
-                                    buildMockQuestions(ocrText, documentId)
+                                    quizParser.buildFallbackQuestions(ocrText, documentId)
                             );
                         });
                     }
@@ -1169,17 +1388,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     try {
-        List<StudyQuestion> questions = parseQuizQuestions(quizJson, documentId);
+        List<StudyQuestion> questions = quizParser.parse(quizJson, documentId);
         if (questions.isEmpty()) {
             Toast.makeText(this, "Gemini trả danh sách rỗng, đã dùng câu hỏi mẫu", Toast.LENGTH_SHORT).show();
-            questions = buildMockQuestions(fallbackText, documentId);
+            questions = quizParser.buildFallbackQuestions(fallbackText, documentId);
         }
 
         saveGeneratedQuestions(questions, documentId);
     } catch (Exception exception) {
         android.util.Log.e("GeminiQuiz", "Raw quiz JSON: " + quizJson, exception);
         Toast.makeText(this, "Không thể đọc JSON Gemini, đã dùng câu hỏi mẫu", Toast.LENGTH_SHORT).show();
-        saveGeneratedQuestions(buildMockQuestions(fallbackText, documentId));
+        saveGeneratedQuestions(quizParser.buildFallbackQuestions(fallbackText, documentId));
     }
     }
 
@@ -1299,8 +1518,9 @@ public class MainActivity extends AppCompatActivity {
 
         for (StudyQuestion question : questions) {
             MaterialCardView card = UiViewFactory.createCard(this);
-            card.setClickable(false);
-            card.setFocusable(false);
+            card.setClickable(true);
+            card.setFocusable(true);
+            card.setOnClickListener(v -> showQuestionEditor(question));
 
             LinearLayout content = new LinearLayout(this);
             content.setOrientation(LinearLayout.VERTICAL);
@@ -1366,9 +1586,176 @@ public class MainActivity extends AppCompatActivity {
                 content.addView(explanation);
             }
 
+            LinearLayout actions = new LinearLayout(this);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            actions.setPadding(0, UiViewFactory.dp(this, 12), 0, 0);
+
+            TextView editAction = UiViewFactory.createText(this, "Sửa", 13, R.color.brand_blue_dark, true);
+            editAction.setBackgroundResource(R.drawable.bg_action_chip_blue);
+            editAction.setGravity(android.view.Gravity.CENTER);
+            editAction.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8),
+                    UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8));
+            editAction.setOnClickListener(v -> showQuestionEditor(question));
+
+            TextView deleteAction = UiViewFactory.createText(this, "Xóa", 13, R.color.brand_orange, true);
+            deleteAction.setBackgroundResource(R.drawable.bg_action_chip_danger);
+            deleteAction.setGravity(android.view.Gravity.CENTER);
+            deleteAction.setPadding(UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8),
+                    UiViewFactory.dp(this, 16), UiViewFactory.dp(this, 8));
+            deleteAction.setOnClickListener(v -> confirmDeleteQuestion(question));
+
+            LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+            actionParams.setMargins(0, 0, UiViewFactory.dp(this, 8), 0);
+            actions.addView(editAction, actionParams);
+
+            LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+            deleteParams.setMargins(UiViewFactory.dp(this, 8), 0, 0, 0);
+            actions.addView(deleteAction, deleteParams);
+            content.addView(actions);
+
             card.addView(content);
             container.addView(card, UiViewFactory.verticalMargin(this, 12));
         }
+    }
+
+    private void showQuestionEditor(StudyQuestion question) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        int padding = UiViewFactory.dp(this, 8);
+        form.setPadding(padding, padding, padding, 0);
+
+        EditText questionInput = createDialogInput("Câu hỏi", question.questionText);
+        EditText optionAInput = createDialogInput("Đáp án A", question.optionA);
+        EditText optionBInput = createDialogInput("Đáp án B", question.optionB);
+        EditText optionCInput = createDialogInput("Đáp án C", question.optionC);
+        EditText optionDInput = createDialogInput("Đáp án D", question.optionD);
+        EditText correctInput = createDialogInput("Đáp án đúng (A/B/C/D)", question.correctOption);
+        EditText explanationInput = createDialogInput("Giải thích", question.explanation);
+
+        form.addView(questionInput);
+        form.addView(optionAInput);
+        form.addView(optionBInput);
+        form.addView(optionCInput);
+        form.addView(optionDInput);
+        form.addView(correctInput);
+        form.addView(explanationInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Sửa câu hỏi")
+                .setView(form)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Lưu", (dialog, which) -> {
+                    question.questionText = questionInput.getText().toString().trim();
+                    question.optionA = optionAInput.getText().toString().trim();
+                    question.optionB = optionBInput.getText().toString().trim();
+                    question.optionC = optionCInput.getText().toString().trim();
+                    question.optionD = optionDInput.getText().toString().trim();
+                    question.correctOption = normalizeCorrectOption(correctInput.getText().toString());
+                    question.explanation = explanationInput.getText().toString().trim();
+                    updateQuestion(question);
+                })
+                .show();
+    }
+
+    private EditText createDialogInput(String hint, String value) {
+        EditText input = new EditText(this);
+        input.setHint(hint);
+        input.setText(value == null ? "" : value);
+        input.setSingleLine(false);
+        input.setMinLines(1);
+        input.setTextColor(getColor(R.color.ink));
+        input.setTextSize(14);
+        return input;
+    }
+
+    private void updateQuestion(StudyQuestion question) {
+        if (isBlank(question.questionText)
+                || isBlank(question.optionA)
+                || isBlank(question.optionB)
+                || isBlank(question.optionC)
+                || isBlank(question.optionD)) {
+            Toast.makeText(this, "Câu hỏi và đáp án không được để trống", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        studyRepository.updateQuestion(question, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Đã cập nhật câu hỏi", Toast.LENGTH_SHORT).show();
+                loadQuestionBankFromDatabase();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể cập nhật câu hỏi", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void confirmDeleteDisplayedSummary() {
+        if (latestDisplayedSummary == null) {
+            Toast.makeText(this, "Chưa có kết quả AI để xóa", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa kết quả AI")
+                .setMessage("Bạn có chắc muốn xóa kết quả AI đang xem không?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> deleteDisplayedSummary())
+                .show();
+    }
+
+    private void deleteDisplayedSummary() {
+        if (latestDisplayedSummary == null) {
+            return;
+        }
+
+        studyRepository.deleteSummary(latestDisplayedSummary, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                latestDisplayedSummary = null;
+                Toast.makeText(MainActivity.this, "Đã xóa kết quả AI", Toast.LENGTH_SHORT).show();
+                showProcessDocument();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể xóa kết quả AI", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void confirmDeleteQuestion(StudyQuestion question) {
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa câu hỏi")
+                .setMessage("Bạn có chắc muốn xóa câu hỏi này không?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> deleteQuestion(question))
+                .show();
+    }
+
+    private void deleteQuestion(StudyQuestion question) {
+        studyRepository.deleteQuestion(question, new RepositoryCallback<Integer>() {
+            @Override
+            public void onSuccess(Integer result) {
+                Toast.makeText(MainActivity.this, "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
+                loadQuestionBankFromDatabase();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(MainActivity.this, "Không thể xóa câu hỏi", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showQuestions() {
@@ -1519,24 +1906,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        int correct = 0;
-        for (StudyQuestion question : currentQuizQuestions) {
-            String selectedAnswer = selectedQuizAnswers.get(question.id);
-            if (question.correctOption.equalsIgnoreCase(selectedAnswer)) {
-                correct++;
-            }
-        }
-
-        int total = currentQuizQuestions.size();
-        int wrong = total - correct;
-        float score = total == 0 ? 0f : (correct * 10f) / total;
-
-        QuizAttempt attempt = new QuizAttempt(
+        QuizAttempt attempt = quizScoringService.score(
                 selectedDocument.id,
-                score,
-                correct,
-                wrong,
-                System.currentTimeMillis()
+                currentQuizQuestions,
+                selectedQuizAnswers
         );
 
         studyRepository.createQuizAttempt(
@@ -1706,72 +2079,6 @@ public class MainActivity extends AppCompatActivity {
         return summary.toString();
     }
 
-    private List<StudyQuestion> parseQuizQuestions(String quizJson, long documentId) throws Exception {
-        String cleanJson = extractJsonPayload(quizJson);
-        JSONArray array;
-        if (cleanJson.startsWith("{")) {
-            JSONObject object = new JSONObject(cleanJson);
-            array = object.optJSONArray("questions");
-            if (array == null) {
-                array = object.optJSONArray("data");
-            }
-            if (array == null) {
-                throw new IllegalArgumentException("Quiz JSON object does not contain questions array");
-            }
-        } else {
-            array = new JSONArray(cleanJson);
-        }
-        List<StudyQuestion> questions = new ArrayList<>();
-
-        for (int i = 0; i < array.length(); i++) {
-            JSONObject item = array.getJSONObject(i);
-            String correctOption = normalizeCorrectOption(item.optString("correctOption", "A"));
-
-            StudyQuestion question = new StudyQuestion(
-                    documentId,
-                    item.optString("questionText", "Câu hỏi " + (i + 1)),
-                    item.optString("optionA", "Đáp án A"),
-                    item.optString("optionB", "Đáp án B"),
-                    item.optString("optionC", "Đáp án C"),
-                    item.optString("optionD", "Đáp án D"),
-                    correctOption,
-                    item.optString("explanation", ""),
-                    i + 1
-            );
-
-            questions.add(question);
-        }
-
-        return questions;
-    }
-
-    private String extractJsonPayload(String rawText) {
-        String cleanText = rawText == null ? "" : rawText.trim();
-        if (cleanText.startsWith("```")) {
-            int firstNewline = cleanText.indexOf('\n');
-            if (firstNewline != -1) {
-                cleanText = cleanText.substring(firstNewline + 1).trim();
-            }
-            if (cleanText.endsWith("```")) {
-                cleanText = cleanText.substring(0, cleanText.length() - 3).trim();
-            }
-        }
-
-        int firstArray = cleanText.indexOf('[');
-        int lastArray = cleanText.lastIndexOf(']');
-        if (firstArray >= 0 && lastArray > firstArray) {
-            return cleanText.substring(firstArray, lastArray + 1);
-        }
-
-        int firstObject = cleanText.indexOf('{');
-        int lastObject = cleanText.lastIndexOf('}');
-        if (firstObject >= 0 && lastObject > firstObject) {
-            return cleanText.substring(firstObject, lastObject + 1);
-        }
-
-        return cleanText;
-    }
-
     private String normalizeCorrectOption(String option) {
         if (isBlank(option)) {
             return "A";
@@ -1782,70 +2089,6 @@ public class MainActivity extends AppCompatActivity {
         if (normalized.startsWith("C")) return "C";
         if (normalized.startsWith("D")) return "D";
         return "A";
-    }
-
-    private List<StudyQuestion> buildMockQuestions(String ocrText, long documentId) {
-        String source = isBlank(ocrText) ? "nội dung tài liệu" : ocrText.trim();
-        String preview = source.length() > 90 ? source.substring(0, 90).trim() + "..." : source;
-        List<StudyQuestion> questions = new ArrayList<>();
-
-        questions.add(new StudyQuestion(
-                documentId,
-                "Ý chính của tài liệu này là gì?",
-                preview,
-                "Một nội dung không liên quan đến tài liệu",
-                "Thông tin về tài khoản người dùng",
-                "Cấu hình giao diện ứng dụng",
-                "A",
-                "Đáp án A được lấy trực tiếp từ nội dung OCR.",
-                1
-        ));
-        questions.add(new StudyQuestion(
-                documentId,
-                "Nguồn dữ liệu nào được dùng để tạo bộ câu hỏi?",
-                "Nội dung OCR của tài liệu",
-                "Tên ứng dụng",
-                "Màu nền giao diện",
-                "Lịch sử hệ thống",
-                "A",
-                "Ứng dụng tạo câu hỏi dựa trên phần OCR đã lưu.",
-                2
-        ));
-        questions.add(new StudyQuestion(
-                documentId,
-                "Sau khi tạo câu hỏi, dữ liệu nên được lưu ở đâu?",
-                "SQLite",
-                "Bộ nhớ tạm của màn hình",
-                "Toast message",
-                "Thanh trạng thái",
-                "A",
-                "Proposal yêu cầu lưu câu hỏi và đáp án vào SQLite.",
-                3
-        ));
-        questions.add(new StudyQuestion(
-                documentId,
-                "Người dùng cần làm gì trước khi tạo quiz?",
-                "Nhập hoặc lưu nội dung OCR",
-                "Xóa môn học",
-                "Đổi icon ứng dụng",
-                "Tắt kết nối mạng",
-                "A",
-                "Quiz được tạo từ OCR text nên cần có OCR trước.",
-                4
-        ));
-        questions.add(new StudyQuestion(
-                documentId,
-                "Kết quả quiz dùng để làm gì?",
-                "Theo dõi lịch sử học tập",
-                "Tạo màu nền mới",
-                "Đổi tên package",
-                "Xóa database",
-                "A",
-                "Điểm quiz được lưu để xem lại trong lịch sử học tập.",
-                5
-        ));
-
-        return questions;
     }
 
     private boolean isBlank(String value) {

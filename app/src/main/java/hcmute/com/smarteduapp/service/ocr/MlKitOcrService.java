@@ -1,6 +1,7 @@
 package hcmute.com.smarteduapp.service.ocr;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.net.Uri;
 
 import com.google.mlkit.vision.common.InputImage;
@@ -33,6 +34,18 @@ public class MlKitOcrService {
         } catch (IOException exception) {
             callback.onError(exception);
         }
+    }
+
+    public void recognizeBitmap(Bitmap bitmap, OcrCallback callback) {
+        if (bitmap == null) {
+            callback.onError(new IllegalArgumentException("Bitmap is null"));
+            return;
+        }
+
+        InputImage image = InputImage.fromBitmap(bitmap, 0);
+        recognizer.process(image)
+                .addOnSuccessListener(text -> callback.onSuccess(extractText(text)))
+                .addOnFailureListener(callback::onError);
     }
 
     private String extractText(Text text) {
