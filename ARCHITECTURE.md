@@ -40,8 +40,10 @@ app/src/main/java/hcmute/com/smarteduapp/
 - `service/ai`: AI requests, prompts and structured JSON responses.
 - `service/study`: AI quiz parsing and quiz scoring logic that should not live in UI code.
 - `ui/common`: Shared view-building utilities.
-- `ui/main`: Displays screens, receives user input, and calls repositories.
-- `ui/subject`, `ui/document`, `ui/study`: Feature-specific presentation code.
+- `ui/main`: Main navigation flow, home sidebar controller and home dashboard renderer.
+- `ui/subject`: Subject/document list rendering.
+- `ui/document`: Document attachment preview and thumbnail rendering.
+- `ui/study`: Summary, question bank, quiz, result, history and AI chat rendering.
 
 Android layout resources remain in `res/layout` because Android does not support nested
 layout resource folders. Screen prefixes identify their feature:
@@ -54,3 +56,18 @@ layout resource folders. Screen prefixes identify their feature:
 
 New feature code must be added to these packages instead of placing ML Kit, API or
 business logic directly inside `MainActivity`.
+
+`MainActivity` is still the central screen coordinator for this MVP, but repeated UI card
+rendering has been split into renderer/controller classes so each module is easier to read:
+
+- `SubjectController`: manages subject list, subject form, subject detail and subject CRUD.
+- `DocumentController`: manages document CRUD, attachment file flow, OCR and scanned-content screens.
+- `StudyController`: manages AI summary, AI chat, question bank, quiz and quiz result flow.
+- `HistoryController`: manages learning-history loading and rendering.
+- `HomeMenuController`: opens/closes the sidebar menu.
+- `HomeDashboardRenderer`: renders recent activity and recent quiz history on the home screen.
+- `SubjectListRenderer`: renders subject cards and document cards.
+- `DocumentAttachmentUi`: renders attachment thumbnails and document preview.
+- `QuestionBankRenderer`: renders saved questions and small edit/delete actions.
+- `QuizUiRenderer`: renders quiz questions and result review.
+- `ChatMessageRenderer`: renders AI chat messages.
