@@ -199,7 +199,7 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/buttonQuestions"
+                android:id="@+id/buttonCreateQuiz"
                 android:layout_width="0dp"
                 android:layout_height="66dp"
                 android:layout_marginStart="6dp"

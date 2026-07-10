@@ -2,26 +2,25 @@ package hcmute.com.smarteduapp.ui.main;
 
 import android.view.View;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
+import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
 import hcmute.com.smarteduapp.service.ai.GeminiService;
 import hcmute.com.smarteduapp.ui.common.UiViewFactory;
-import hcmute.com.smarteduapp.ui.study.QuestionBankRenderer;
 
 /**
- * Owns AI summary, AI chat, question bank and quiz flow.
+ * Owns AI summary, AI chat and quiz flow.
  */
 class StudyController {
     private final MainActivity activity;
@@ -112,7 +111,7 @@ class StudyController {
         activity.setContentView(R.layout.screen_summary_explain);
         activity.applySystemBars();
         activity.bindClick(R.id.backProcess, activity::showProcessDocument);
-        activity.bindClick(R.id.buttonStartQuiz, this::showQuestionBank);
+        activity.bindClick(R.id.buttonStartQuiz, this::createQuizFromCurrentDocument);
         activity.bindClick(R.id.buttonDeleteSummary, this::confirmDeleteDisplayedSummary);
 
         loadSummaryFromDatabase();
@@ -351,7 +350,9 @@ class StudyController {
                 new RepositoryCallback<Integer>() {
                     @Override
                     public void onSuccess(Integer result) {
-                        renderQuestionBankScreen();
+                        activity.latestQuizAttempt = null;
+                        activity.selectedQuizAnswers.clear();
+                        showQuestions();
                     }
 
                     @Override
@@ -395,146 +396,6 @@ class StudyController {
     }
 
 
-    void showQuestionBank() {
-        if (activity.selectedDocument == null) {
-            return;
-        }
-
-        activity.ensureCurrentDocumentHasAttachments(
-                "Tài liệu không còn file đính kèm, không thể mở bộ câu hỏi",
-                this::renderQuestionBankScreen
-        );
-    }
-
-
-    void renderQuestionBankScreen() {
-        activity.currentScreen = R.layout.screen_question_bank;
-        activity.setContentView(R.layout.screen_question_bank);
-        activity.applySystemBars();
-        activity.bindClick(R.id.backProcessFromBank, activity::showProcessDocument);
-        activity.bindClick(R.id.buttonStartQuizFromBank, this::showQuestions);
-        activity.bindClick(R.id.buttonRegenerateQuestions, this::createQuizFromCurrentDocument);
-        loadQuestionBankFromDatabase();
-    }
-
-
-    void loadQuestionBankFromDatabase() {
-        if (activity.selectedDocument == null) {
-            return;
-        }
-
-        TextView subtitle = activity.findViewById(R.id.questionBankSubtitle);
-        subtitle.setText(activity.selectedDocument.title + " · Danh sách câu hỏi đã lưu");
-
-        activity.studyRepository.getQuestionsByDocumentId(
-                activity.selectedDocument.id,
-                new RepositoryCallback<List<StudyQuestion>>() {
-                    @Override
-                    public void onSuccess(List<StudyQuestion> questions) {
-                        renderQuestionBank(questions);
-                    }
-
-                    @Override
-                    public void onError(Exception exception) {
-                        Toast.makeText(activity, "Không thể tải câu hỏi", Toast.LENGTH_SHORT).show();
-                    }
-                }
-        );
-    }
-
-
-    void renderQuestionBank(List<StudyQuestion> questions) {
-        activity.questionBankRenderer.render(questions, new QuestionBankRenderer.QuestionActionListener() {
-            @Override
-            public void onEditQuestion(StudyQuestion question) {
-                showQuestionEditor(question);
-            }
-
-            @Override
-            public void onDeleteQuestion(StudyQuestion question) {
-                confirmDeleteQuestion(question);
-            }
-        });
-    }
-
-
-    void showQuestionEditor(StudyQuestion question) {
-        LinearLayout form = new LinearLayout(activity);
-        form.setOrientation(LinearLayout.VERTICAL);
-        int padding = UiViewFactory.dp(activity, 8);
-        form.setPadding(padding, padding, padding, 0);
-
-        EditText questionInput = createDialogInput("Câu hỏi", question.questionText);
-        EditText optionAInput = createDialogInput("Đáp án A", question.optionA);
-        EditText optionBInput = createDialogInput("Đáp án B", question.optionB);
-        EditText optionCInput = createDialogInput("Đáp án C", question.optionC);
-        EditText optionDInput = createDialogInput("Đáp án D", question.optionD);
-        EditText correctInput = createDialogInput("Đáp án đúng (A/B/C/D)", question.correctOption);
-        EditText explanationInput = createDialogInput("Giải thích", question.explanation);
-
-        form.addView(questionInput);
-        form.addView(optionAInput);
-        form.addView(optionBInput);
-        form.addView(optionCInput);
-        form.addView(optionDInput);
-        form.addView(correctInput);
-        form.addView(explanationInput);
-
-        new AlertDialog.Builder(activity)
-                .setTitle("Sửa câu hỏi")
-                .setView(form)
-                .setNegativeButton("Hủy", null)
-                .setPositiveButton("Lưu", (dialog, which) -> {
-                    question.questionText = questionInput.getText().toString().trim();
-                    question.optionA = optionAInput.getText().toString().trim();
-                    question.optionB = optionBInput.getText().toString().trim();
-                    question.optionC = optionCInput.getText().toString().trim();
-                    question.optionD = optionDInput.getText().toString().trim();
-                    question.correctOption = normalizeCorrectOption(correctInput.getText().toString());
-                    question.explanation = explanationInput.getText().toString().trim();
-                    updateQuestion(question);
-                })
-                .show();
-    }
-
-
-    EditText createDialogInput(String hint, String value) {
-        EditText input = new EditText(activity);
-        input.setHint(hint);
-        input.setText(value == null ? "" : value);
-        input.setSingleLine(false);
-        input.setMinLines(1);
-        input.setTextColor(activity.getColor(R.color.ink));
-        input.setTextSize(14);
-        return input;
-    }
-
-
-    void updateQuestion(StudyQuestion question) {
-        if (activity.isBlank(question.questionText)
-                || activity.isBlank(question.optionA)
-                || activity.isBlank(question.optionB)
-                || activity.isBlank(question.optionC)
-                || activity.isBlank(question.optionD)) {
-            Toast.makeText(activity, "Câu hỏi và đáp án không được để trống", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        activity.studyRepository.updateQuestion(question, new RepositoryCallback<Integer>() {
-            @Override
-            public void onSuccess(Integer result) {
-                Toast.makeText(activity, "Đã cập nhật câu hỏi", Toast.LENGTH_SHORT).show();
-                loadQuestionBankFromDatabase();
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Toast.makeText(activity, "Không thể cập nhật câu hỏi", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-
     void confirmDeleteDisplayedSummary() {
         if (activity.latestDisplayedSummary == null) {
             Toast.makeText(activity, "Chưa có kết quả AI để xóa", Toast.LENGTH_SHORT).show();
@@ -571,39 +432,26 @@ class StudyController {
     }
 
 
-    void confirmDeleteQuestion(StudyQuestion question) {
-        new AlertDialog.Builder(activity)
-                .setTitle("Xóa câu hỏi")
-                .setMessage("Bạn có chắc muốn xóa câu hỏi này không?")
-                .setNegativeButton("Hủy", null)
-                .setPositiveButton("Xóa", (dialog, which) -> deleteQuestion(question))
-                .show();
-    }
-
-
-    void deleteQuestion(StudyQuestion question) {
-        activity.studyRepository.deleteQuestion(question, new RepositoryCallback<Integer>() {
-            @Override
-            public void onSuccess(Integer result) {
-                Toast.makeText(activity, "Đã xóa câu hỏi", Toast.LENGTH_SHORT).show();
-                loadQuestionBankFromDatabase();
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Toast.makeText(activity, "Không thể xóa câu hỏi", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-
     void showQuestions() {
+        showQuestions(true);
+    }
+
+
+    void showQuestions(boolean reloadFromDatabase) {
         activity.currentScreen = R.layout.screen_questions;
         activity.setContentView(R.layout.screen_questions);
         activity.applySystemBars();
         activity.bindClick(R.id.backProcessFromQuestions, activity::showProcessDocument);
         activity.bindClick(R.id.buttonCheckAnswers, this::submitQuizAnswers);
-        loadQuizQuestionsFromDatabase();
+        if (reloadFromDatabase || activity.currentQuizQuestions.isEmpty()) {
+            loadQuizQuestionsFromDatabase();
+            return;
+        }
+
+        TextView title = activity.findViewById(R.id.quizTitle);
+        title.setText("Quiz: " + activity.selectedDocument.title);
+        activity.selectedQuizAnswers.clear();
+        renderQuizQuestions(activity.currentQuizQuestions);
     }
 
 
@@ -650,9 +498,11 @@ class StudyController {
                 activity.currentQuizQuestions,
                 activity.selectedQuizAnswers
         );
+        List<QuizAttemptAnswer> answers = buildAttemptAnswers(attempt);
 
-        activity.studyRepository.createQuizAttempt(
+        activity.studyRepository.createQuizAttemptWithAnswers(
                 attempt,
+                answers,
                 new RepositoryCallback<Long>() {
                     @Override
                     public void onSuccess(Long id) {
@@ -670,14 +520,54 @@ class StudyController {
     }
 
 
+    private List<QuizAttemptAnswer> buildAttemptAnswers(QuizAttempt attempt) {
+        List<QuizAttemptAnswer> answers = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            String selectedOption = activity.selectedQuizAnswers.get(question.id);
+            if (selectedOption == null) {
+                selectedOption = "";
+            }
+
+            answers.add(new QuizAttemptAnswer(
+                    0,
+                    attempt.document_id,
+                    question.id,
+                    question.questionOrder,
+                    question.questionText,
+                    question.optionA,
+                    question.optionB,
+                    question.optionC,
+                    question.optionD,
+                    question.correctOption,
+                    selectedOption,
+                    question.explanation,
+                    selectedOption.equalsIgnoreCase(question.correctOption),
+                    now
+            ));
+        }
+        return answers;
+    }
+
+
     void showQuizResult() {
         activity.currentScreen = R.layout.screen_quiz_result;
         activity.setContentView(R.layout.screen_quiz_result);
         activity.applySystemBars();
-        activity.bindClick(R.id.backQuestionBank, this::showQuestionBank);
+        activity.bindClick(R.id.backQuizResult, this::goBackFromQuizResult);
         activity.bindClick(R.id.buttonViewHistory, activity::showHistory);
-        activity.bindClick(R.id.buttonRetryQuiz, this::showQuestions);
+        activity.bindClick(R.id.buttonRetryQuiz, () -> showQuestions(false));
         renderQuizResult();
+    }
+
+
+    void goBackFromQuizResult() {
+        if (activity.documentOpenedFromHistory) {
+            activity.documentOpenedFromHistory = false;
+            activity.showHistory();
+            return;
+        }
+        activity.showProcessDocument();
     }
 
 
@@ -721,19 +611,5 @@ class StudyController {
 
         return summary.toString();
     }
-
-
-    String normalizeCorrectOption(String option) {
-        if (activity.isBlank(option)) {
-            return "A";
-        }
-        String normalized = option.trim().toUpperCase(Locale.US);
-        if (normalized.startsWith("A")) return "A";
-        if (normalized.startsWith("B")) return "B";
-        if (normalized.startsWith("C")) return "C";
-        if (normalized.startsWith("D")) return "D";
-        return "A";
-    }
-
 
 }

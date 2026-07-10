@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text="Kết quả học tập"
+                android:text="Lịch sử học tập"
                 android:textColor="@color/ink"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -52,15 +52,14 @@
             android:gravity="center_vertical"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:text="Lịch sử quiz đã lưu trong SQLite"
+            android:text="Theo dõi tài liệu đã học và kết quả quiz đã lưu"
             android:textColor="@color/ink_muted"
             android:textSize="14sp" />
 
-        <LinearLayout
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/historyContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:orientation="vertical" />
+            android:layout_marginTop="6dp" />
     </LinearLayout>
 </ScrollView>

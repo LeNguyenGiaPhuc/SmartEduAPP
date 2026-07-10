@@ -1,6 +1,7 @@
 package hcmute.com.smarteduapp.data.local.dao;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
 
@@ -18,6 +19,9 @@ public interface QuizAttemptDao {
 
     @Insert
     long insert(QuizAttempt attempt);
+
+    @Delete
+    int delete(QuizAttempt attempt);
 
     @Query("DELETE FROM quiz_attempts WHERE document_id = :documentId")
     int deleteByDocumentId(long documentId);

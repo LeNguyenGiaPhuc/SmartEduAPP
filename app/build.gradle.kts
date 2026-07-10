@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
+    implementation(libs.recyclerview)
     implementation(libs.material)
     implementation(libs.room.runtime)
     annotationProcessor(libs.room.compiler)

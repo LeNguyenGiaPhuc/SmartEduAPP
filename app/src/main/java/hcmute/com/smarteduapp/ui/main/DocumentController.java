@@ -71,9 +71,9 @@ class DocumentController {
         TextView formTitle = activity.findViewById(R.id.documentFormTitle);
         TextView subjectLabel = activity.findViewById(R.id.documentSubjectLabel);
         View deleteButton = activity.findViewById(R.id.buttonDeleteDocument);
-        formTitle.setText(isEditing ? "Chá»‰nh sá»­a tÃ i liá»‡u" : "ThÃªm tÃ i liá»‡u");
+        formTitle.setText(isEditing ? "Chỉnh sửa tài liệu" : "Thêm tài liệu");
         deleteButton.setVisibility(isEditing ? View.VISIBLE : View.GONE);
-        subjectLabel.setText("MÃ´n há»c: " + (activity.selectedSubject == null ? "" : activity.selectedSubject.name));
+        subjectLabel.setText("Môn học: " + (activity.selectedSubject == null ? "" : activity.selectedSubject.name));
 
         if (isEditing && activity.selectedDocument != null) {
             titleInput.setText(activity.selectedDocument.title);
@@ -98,7 +98,7 @@ class DocumentController {
     void saveDocument(long documentId, EditText titleInput) {
         String title = titleInput.getText().toString().trim();
         if (title.isEmpty()) {
-            titleInput.setError("Nháº­p tÃªn tÃ i liá»‡u");
+            titleInput.setError("Nhập tên tài liệu");
             return;
         }
         String imageUri = activity.selectedDocumentImageUri == null ? null : activity.selectedDocumentImageUri.toString();
@@ -122,7 +122,7 @@ class DocumentController {
 
                     @Override
                     public void onError(Exception exception) {
-                        Toast.makeText(activity, "ÄÃ£ lÆ°u tÃ i liá»‡u nhÆ°ng chÆ°a lÆ°u Ä‘Æ°á»£c file", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, "Đã lưu tài liệu nhưng chưa lưu được file", Toast.LENGTH_SHORT).show();
                         activity.showSubjectDetail();
                     }
                 });
@@ -130,7 +130,7 @@ class DocumentController {
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ lÆ°u tÃ i liá»‡u",
+                Toast.makeText(activity, "Không thể lưu tài liệu",
                         Toast.LENGTH_SHORT).show();
             }
         });
@@ -139,7 +139,7 @@ class DocumentController {
 
     void updateDocument(long documentId, String title, String imageUri) {
         if (activity.selectedDocument == null || activity.selectedDocument.id != documentId) {
-            Toast.makeText(activity, "KhÃ´ng tÃ¬m tháº¥y tÃ i liá»‡u Ä‘á»ƒ cáº­p nháº­t", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Không tìm thấy tài liệu để cập nhật", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -149,7 +149,7 @@ class DocumentController {
             @Override
             public void onSuccess(Integer result) {
                 if (activity.isBlank(imageUri)) {
-                    Toast.makeText(activity, "ÄÃ£ cáº­p nháº­t tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
                     showProcessDocument();
                     return;
                 }
@@ -157,20 +157,20 @@ class DocumentController {
                     @Override
                     public void onSuccess(Long imageId) {
                         activity.selectedDocumentImageUri = null;
-                        Toast.makeText(activity, "ÄÃ£ cáº­p nháº­t tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
                         showProcessDocument();
                     }
 
                     @Override
                     public void onError(Exception exception) {
-                        Toast.makeText(activity, "KhÃ´ng thá»ƒ thÃªm file vÃ o tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, "Không thể thêm file vào tài liệu", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ cáº­p nháº­t tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Không thể cập nhật tài liệu", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -201,7 +201,7 @@ class DocumentController {
             activity.pendingCameraImageUri = createCameraImageUri();
             activity.cameraCaptureLauncher.launch(activity.pendingCameraImageUri);
         } catch (IOException exception) {
-            Toast.makeText(activity, "KhÃ´ng thá»ƒ táº¡o file áº£nh", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Không thể tạo file ảnh", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -234,7 +234,7 @@ class DocumentController {
             return;
         }
         if (activity.selectedDocumentImageUri == null) {
-            label.setText("ChÆ°a chá»n áº£nh hoáº·c file tÃ i liá»‡u");
+            label.setText("Chưa chọn ảnh hoặc file tài liệu");
             return;
         }
         label.setText(getDocumentAttachmentLabel(activity.selectedDocumentImageUri.toString()));
@@ -265,17 +265,17 @@ class DocumentController {
         TextView imagePlaceholder = activity.findViewById(R.id.imageDocThumb);
 
         if (activity.selectedDocument != null) {
-            textDocName.setText("TÃ i liá»‡u: " + activity.selectedDocument.title);
+            textDocName.setText("Tài liệu: " + activity.selectedDocument.title);
             if (activity.isBlank(activity.selectedDocument.ocrText)) {
-                textContentStatus.setText("ChÆ°a quÃ©t ná»™i dung. HÃ£y quÃ©t tÃ i liá»‡u trÆ°á»›c khi dÃ¹ng AI.");
+                textContentStatus.setText("Chưa quét nội dung. Hãy quét tài liệu trước khi dùng AI.");
             } else {
-                textContentStatus.setText("ÄÃ£ cÃ³ ná»™i dung Ä‘Æ°á»£c quÃ©t. Báº¡n cÃ³ thá»ƒ xem ná»™i dung hoáº·c dÃ¹ng AI.");
+                textContentStatus.setText("Đã có nội dung được quét. Bạn có thể xem nội dung hoặc dùng AI.");
             }
             showDocumentImage(null, imagePreview, imagePlaceholder);
             loadDocumentImages(activity.selectedDocument.id);
         }
 
-        activity.bindClick(R.id.backHome, activity::showSubjectDetail);
+        activity.bindClick(R.id.backHome, this::goBackFromProcessDocument);
         activity.bindClick(R.id.buttonRunOcr, this::runOcrForCurrentDocument);
         activity.bindClick(R.id.buttonViewDocumentContent, this::showDocumentContent);
         activity.bindClick(R.id.buttonEditDocument, () -> {
@@ -284,7 +284,7 @@ class DocumentController {
             }
         });
         activity.bindClick(R.id.buttonSummary, activity::createSummaryFromCurrentDocument);
-        activity.bindClick(R.id.buttonQuestions, activity::createQuizFromCurrentDocument);
+        activity.bindClick(R.id.buttonCreateQuiz, activity::createQuizFromCurrentDocument);
         activity.bindClick(R.id.buttonExplain, activity::showAiChat);
         activity.bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
         activity.bindClick(R.id.buttonAddMoreImages, () -> activity.addMoreImagesPickerLauncher.launch(new String[]{
@@ -298,6 +298,16 @@ class DocumentController {
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         }));
+    }
+
+
+    void goBackFromProcessDocument() {
+        if (activity.documentOpenedFromHistory) {
+            activity.documentOpenedFromHistory = false;
+            activity.showHistory();
+            return;
+        }
+        activity.showSubjectDetail();
     }
 
 
@@ -319,7 +329,7 @@ class DocumentController {
                 if (document == null) {
                     activity.selectedDocument = null;
                     activity.selectedDocumentImages = new ArrayList<>();
-                    Toast.makeText(activity, "TÃ i liá»‡u Ä‘Ã£ bá»‹ xÃ³a", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, "Tài liệu đã bị xóa", Toast.LENGTH_SHORT).show();
                     activity.showSubjectDetail();
                     return;
                 }
@@ -339,14 +349,14 @@ class DocumentController {
 
                     @Override
                     public void onError(Exception exception) {
-                        Toast.makeText(activity, "KhÃ´ng thá»ƒ kiá»ƒm tra file tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, "Không thể kiểm tra file tài liệu", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ kiá»ƒm tra tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Không thể kiểm tra tài liệu", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -422,7 +432,7 @@ class DocumentController {
         int[] actionIds = {
                 R.id.buttonRunOcr,
                 R.id.buttonSummary,
-                R.id.buttonQuestions,
+                R.id.buttonCreateQuiz,
                 R.id.buttonExplain
         };
         float alpha = enabled ? 1f : 0.45f;
@@ -448,9 +458,9 @@ class DocumentController {
 
         TextView title = activity.findViewById(R.id.textDocumentContentTitle);
         TextView content = activity.findViewById(R.id.textDocumentContent);
-        title.setText("Ná»™i dung: " + activity.selectedDocument.title);
+        title.setText("Nội dung: " + activity.selectedDocument.title);
         content.setText(activity.isBlank(activity.selectedDocument.ocrText)
-                ? "ChÆ°a cÃ³ ná»™i dung Ä‘Æ°á»£c quÃ©t."
+                ? "Chưa có nội dung được quét."
                 : activity.selectedDocument.ocrText);
 
         activity.bindClick(R.id.backProcessFromContent, this::showProcessDocument);
@@ -470,7 +480,7 @@ class DocumentController {
 
         TextView title = activity.findViewById(R.id.textEditContentTitle);
         EditText contentInput = activity.findViewById(R.id.editDocumentContent);
-        title.setText("Sá»­a ná»™i dung: " + activity.selectedDocument.title);
+        title.setText("Sửa nội dung: " + activity.selectedDocument.title);
         contentInput.setText(activity.selectedDocument.ocrText == null ? "" : activity.selectedDocument.ocrText);
 
         activity.bindClick(R.id.backContentFromEdit, this::showDocumentContent);
@@ -487,13 +497,13 @@ class DocumentController {
         activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                Toast.makeText(activity, "ÄÃ£ lÆ°u ná»™i dung tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Đã lưu nội dung tài liệu", Toast.LENGTH_SHORT).show();
                 showDocumentContent();
             }
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ lÆ°u ná»™i dung", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Không thể lưu nội dung", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -501,10 +511,10 @@ class DocumentController {
 
     void confirmDeleteAttachment(StudyDocumentImage image) {
         new AlertDialog.Builder(activity)
-                .setTitle("XÃ³a tÃ i liá»‡u Ä‘Ã­nh kÃ¨m")
-                .setMessage("Báº¡n cÃ³ muá»‘n xÃ³a file/áº£nh nÃ y khá»i bÃ i há»c khÃ´ng?")
-                .setPositiveButton("XÃ³a", (dialog, which) -> deleteAttachment(image))
-                .setNegativeButton("Há»§y", null)
+                .setTitle("Xóa tài liệu đính kèm")
+                .setMessage("Bạn có muốn xóa file/ảnh này khỏi bài học không?")
+                .setPositiveButton("Xóa", (dialog, which) -> deleteAttachment(image))
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 
@@ -513,7 +523,7 @@ class DocumentController {
         activity.documentRepository.deleteImage(image, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                Toast.makeText(activity, "ÄÃ£ xÃ³a tÃ i liá»‡u Ä‘Ã­nh kÃ¨m", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Đã xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
                 if (activity.selectedDocument != null) {
                     refreshAttachmentsAfterDelete(activity.selectedDocument.id);
                 }
@@ -521,7 +531,7 @@ class DocumentController {
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ xÃ³a tÃ i liá»‡u Ä‘Ã­nh kÃ¨m", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Không thể xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -568,7 +578,7 @@ class DocumentController {
                         if (showSuccessMessage) {
                             Toast.makeText(
                                     activity,
-                                    "ÄÃ£ xÃ³a file cuá»‘i cÃ¹ng vÃ  dá»n OCR/AI/quiz cá»§a tÃ i liá»‡u",
+                                    "Đã xóa file cuối cùng và dọn OCR/AI/quiz của tài liệu",
                                     Toast.LENGTH_SHORT
                             ).show();
                         }
@@ -577,7 +587,7 @@ class DocumentController {
 
                     @Override
                     public void onError(Exception exception) {
-                        Toast.makeText(activity, "ÄÃ£ xÃ³a file nhÆ°ng chÆ°a dá»n Ä‘Æ°á»£c dá»¯ liá»‡u AI/quiz", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, "Đã xóa file nhưng chưa dọn được dữ liệu AI/quiz", Toast.LENGTH_SHORT).show();
                         showProcessDocument();
                     }
                 });
@@ -585,7 +595,7 @@ class DocumentController {
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ cáº­p nháº­t tráº¡ng thÃ¡i tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Không thể cập nhật trạng thái tài liệu", Toast.LENGTH_SHORT).show();
                 showProcessDocument();
             }
         });
@@ -598,10 +608,10 @@ class DocumentController {
         }
 
         new AlertDialog.Builder(activity)
-                .setTitle("XÃ³a tÃ i liá»‡u")
-                .setMessage("Báº¡n cÃ³ cháº¯c muá»‘n xÃ³a tÃ i liá»‡u \"" + activity.selectedDocument.title + "\" khÃ´ng?")
-                .setNegativeButton("Há»§y", null)
-                .setPositiveButton("XÃ³a", (dialog, which) -> deleteCurrentDocument())
+                .setTitle("Xóa tài liệu")
+                .setMessage("Bạn có chắc muốn xóa tài liệu \"" + activity.selectedDocument.title + "\" không?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> deleteCurrentDocument())
                 .show();
     }
 
@@ -615,13 +625,18 @@ class DocumentController {
             @Override
             public void onSuccess(Integer result) {
                 activity.selectedDocument = null;
-                Toast.makeText(activity, "ÄÃ£ xÃ³a tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
-                activity.showSubjectDetail();
+                Toast.makeText(activity, "Đã xóa tài liệu", Toast.LENGTH_SHORT).show();
+                if (activity.documentOpenedFromHistory) {
+                    activity.documentOpenedFromHistory = false;
+                    activity.showHistory();
+                } else {
+                    activity.showSubjectDetail();
+                }
             }
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "KhÃ´ng thá»ƒ xÃ³a tÃ i liá»‡u", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Không thể xóa tài liệu", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -640,11 +655,11 @@ class DocumentController {
         }
 
         if (attachmentUris.isEmpty()) {
-            Toast.makeText(activity, "TÃ i liá»‡u chÆ°a cÃ³ áº£nh/file há»£p lá»‡ Ä‘á»ƒ quÃ©t", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Tài liệu chưa có ảnh/file hợp lệ để quét", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Toast.makeText(activity, "Äang quÃ©t ná»™i dung tÃ i liá»‡u...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(activity, "Đang quét nội dung tài liệu...", Toast.LENGTH_SHORT).show();
         activity.documentTextScannerService.scanAttachments(
                 activity,
                 attachmentUris,
@@ -659,7 +674,7 @@ class DocumentController {
                         activity.runOnUiThread(() -> Toast.makeText(
                                 activity,
                                 exception.getMessage() == null
-                                        ? "KhÃ´ng thá»ƒ quÃ©t ná»™i dung tÃ i liá»‡u"
+                                        ? "Không thể quét nội dung tài liệu"
                                         : exception.getMessage(),
                                 Toast.LENGTH_SHORT
                         ).show());
@@ -671,7 +686,7 @@ class DocumentController {
 
     void handleOcrResult(String recognizedText) {
         if (activity.isBlank(recognizedText)) {
-            Toast.makeText(activity, "áº¢nh khÃ´ng cÃ³ vÄƒn báº£n nháº­n dáº¡ng Ä‘Æ°á»£c", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Ảnh không có văn bản nhận dạng được", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -679,13 +694,13 @@ class DocumentController {
         activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                Toast.makeText(activity, "QuÃ©t ná»™i dung tÃ i liá»‡u thÃ nh cÃ´ng", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Quét nội dung tài liệu thành công", Toast.LENGTH_SHORT).show();
                 showProcessDocument();
             }
 
             @Override
             public void onError(Exception exception) {
-                Toast.makeText(activity, "QuÃ©t Ä‘Æ°á»£c ná»™i dung nhÆ°ng chÆ°a lÆ°u Ä‘Æ°á»£c", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Quét được nội dung nhưng chưa lưu được", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -706,7 +721,7 @@ class DocumentController {
         activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                Toast.makeText(activity, "ÄÃ£ lÆ°u ná»™i dung tÃ i liá»‡u!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Đã lưu nội dung tài liệu!", Toast.LENGTH_SHORT).show();
             }
         });
     }

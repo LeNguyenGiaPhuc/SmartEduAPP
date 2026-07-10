@@ -4,9 +4,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.card.MaterialCardView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -16,16 +20,18 @@ import java.util.Map;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
+import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.data.local.entity.Subject;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
+import hcmute.com.smarteduapp.ui.common.SimpleCardAdapter;
 import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 
 /**
  * Owns the learning-history screen.
- * It loads data from repositories and renders document, summary, question and quiz history.
+ * It loads document, summary, question and quiz attempt data from SQLite.
  */
 class HistoryController {
     private final MainActivity activity;
@@ -38,7 +44,6 @@ class HistoryController {
         StudyDocument document;
         Subject subject;
         int summaryCount;
-        int questionCount;
         int attemptCount;
         QuizAttempt latestAttempt;
     }
@@ -48,93 +53,7 @@ class HistoryController {
         activity.setContentView(R.layout.screen_history);
         activity.applySystemBars();
         activity.bindClick(R.id.backHomeFromHistory, activity::showHome);
-        loadHistoryFromDatabase();
-    }
-
-    private void loadHistoryFromDatabase() {
         loadLearningHistorySubjects();
-    }
-
-    private void loadLegacyQuizHistoryFromDatabase() {
-        activity.studyRepository.getAllQuizAttempts(new RepositoryCallback<List<QuizAttempt>>() {
-            @Override
-            public void onSuccess(List<QuizAttempt> attempts) {
-                renderHistory(attempts);
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Toast.makeText(activity, "Không thể tải lịch sử", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void renderHistory(List<QuizAttempt> attempts) {
-        LinearLayout container = activity.findViewById(R.id.historyContainer);
-        container.removeAllViews();
-
-        if (attempts.isEmpty()) {
-            TextView empty = UiViewFactory.createText(
-                    activity,
-                    "Chưa có kết quả quiz nào.",
-                    15,
-                    R.color.ink_muted,
-                    false
-            );
-            container.addView(empty);
-            return;
-        }
-
-        SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-        for (QuizAttempt attempt : attempts) {
-            MaterialCardView card = UiViewFactory.createCard(activity);
-            card.setClickable(false);
-            card.setFocusable(false);
-
-            LinearLayout content = new LinearLayout(activity);
-            content.setOrientation(LinearLayout.VERTICAL);
-            content.setPadding(
-                    UiViewFactory.dp(activity, 16),
-                    UiViewFactory.dp(activity, 14),
-                    UiViewFactory.dp(activity, 16),
-                    UiViewFactory.dp(activity, 14)
-            );
-
-            int total = attempt.correctCount + attempt.wrongCount;
-            TextView title = UiViewFactory.createText(
-                    activity,
-                    "Quiz tài liệu #" + attempt.document_id,
-                    16,
-                    R.color.ink,
-                    true
-            );
-
-            TextView score = UiViewFactory.createText(
-                    activity,
-                    attempt.correctCount + "/" + total + " câu đúng · "
-                            + String.format(Locale.US, "%.1f", attempt.score) + " điểm",
-                    14,
-                    R.color.brand_blue_dark,
-                    true
-            );
-            score.setPadding(0, UiViewFactory.dp(activity, 5), 0, 0);
-
-            TextView detail = UiViewFactory.createText(
-                    activity,
-                    "Sai " + attempt.wrongCount + " câu · " + format.format(new Date(attempt.completedAt)),
-                    13,
-                    R.color.ink_muted,
-                    false
-            );
-            detail.setPadding(0, UiViewFactory.dp(activity, 5), 0, 0);
-
-            content.addView(title);
-            content.addView(score);
-            content.addView(detail);
-            card.addView(content);
-            container.addView(card, UiViewFactory.verticalMargin(activity, 12));
-            UiViewFactory.animateIn(card, container.getChildCount());
-        }
     }
 
     private void loadLearningHistorySubjects() {
@@ -169,7 +88,7 @@ class HistoryController {
         activity.studyRepository.getAllSummaries(new RepositoryCallback<List<StudySummary>>() {
             @Override
             public void onSuccess(List<StudySummary> summaries) {
-                loadLearningHistoryQuestions(subjects, documents, summaries);
+                loadLearningHistoryAttempts(subjects, documents, summaries);
             }
 
             @Override
@@ -179,27 +98,12 @@ class HistoryController {
         });
     }
 
-    private void loadLearningHistoryQuestions(List<Subject> subjects, List<StudyDocument> documents,
-                                              List<StudySummary> summaries) {
-        activity.studyRepository.getAllQuestions(new RepositoryCallback<List<StudyQuestion>>() {
-            @Override
-            public void onSuccess(List<StudyQuestion> questions) {
-                loadLearningHistoryAttempts(subjects, documents, summaries, questions);
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Toast.makeText(activity, "Không thể tải câu hỏi trong lịch sử", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     private void loadLearningHistoryAttempts(List<Subject> subjects, List<StudyDocument> documents,
-                                             List<StudySummary> summaries, List<StudyQuestion> questions) {
+                                             List<StudySummary> summaries) {
         activity.studyRepository.getAllQuizAttempts(new RepositoryCallback<List<QuizAttempt>>() {
             @Override
             public void onSuccess(List<QuizAttempt> attempts) {
-                renderLearningHistory(subjects, documents, summaries, questions, attempts);
+                renderLearningHistory(subjects, documents, summaries, attempts);
             }
 
             @Override
@@ -210,20 +114,17 @@ class HistoryController {
     }
 
     private void renderLearningHistory(List<Subject> subjects, List<StudyDocument> documents,
-                                       List<StudySummary> summaries, List<StudyQuestion> questions,
-                                       List<QuizAttempt> attempts) {
-        LinearLayout container = activity.findViewById(R.id.historyContainer);
-        container.removeAllViews();
+                                       List<StudySummary> summaries, List<QuizAttempt> attempts) {
+        RecyclerView container = activity.findViewById(R.id.historyContainer);
+        UiViewFactory.setupVerticalRecycler(container);
+
+        SimpleCardAdapter adapter = new SimpleCardAdapter();
+        List<SimpleCardAdapter.CardFactory> cards = new ArrayList<>();
 
         if (documents.isEmpty()) {
-            TextView empty = UiViewFactory.createText(
-                    activity,
-                    "Chưa có tài liệu học tập nào.",
-                    15,
-                    R.color.ink_muted,
-                    false
-            );
-            container.addView(empty);
+            cards.add((parent, position) -> createEmptyHistoryView());
+            adapter.submit(cards);
+            container.setAdapter(adapter);
             return;
         }
 
@@ -247,13 +148,6 @@ class HistoryController {
             }
         }
 
-        for (StudyQuestion question : questions) {
-            LearningHistoryItem item = itemByDocumentId.get(question.document_id);
-            if (item != null) {
-                item.questionCount++;
-            }
-        }
-
         for (QuizAttempt attempt : attempts) {
             LearningHistoryItem item = itemByDocumentId.get(attempt.document_id);
             if (item != null) {
@@ -264,13 +158,28 @@ class HistoryController {
             }
         }
 
-        int index = 0;
         for (LearningHistoryItem item : itemByDocumentId.values()) {
-            renderLearningHistoryCard(container, item, index++);
+            cards.add((parent, position) -> createLearningHistoryCard(item, position));
         }
+
+        adapter.submit(cards);
+        container.setAdapter(adapter);
     }
 
-    private void renderLearningHistoryCard(LinearLayout container, LearningHistoryItem item, int index) {
+    private TextView createEmptyHistoryView() {
+        TextView empty = UiViewFactory.createText(
+                activity,
+                "Chưa có tài liệu học tập nào.",
+                15,
+                R.color.ink_muted,
+                false
+        );
+        empty.setGravity(android.view.Gravity.CENTER);
+        empty.setPadding(0, UiViewFactory.dp(activity, 18), 0, UiViewFactory.dp(activity, 18));
+        return empty;
+    }
+
+    private MaterialCardView createLearningHistoryCard(LearningHistoryItem item, int index) {
         SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
         MaterialCardView card = UiViewFactory.createCard(activity);
         card.setOnClickListener(v -> openHistoryDocument(item));
@@ -292,8 +201,7 @@ class HistoryController {
         String ocrState = activity.isBlank(item.document.ocrText) ? "Chưa OCR" : "Đã lưu OCR";
         TextView studyState = UiViewFactory.createText(
                 activity,
-                ocrState + " · " + item.summaryCount + " tóm tắt · "
-                        + item.questionCount + " câu hỏi",
+                ocrState + " · " + item.summaryCount + " tóm tắt",
                 13,
                 R.color.ink_muted,
                 false
@@ -324,27 +232,45 @@ class HistoryController {
             content.addView(quiz);
         }
 
+        LinearLayout primaryActions = createActionRow();
+        if (item.summaryCount > 0) {
+            addHistoryAction(primaryActions, "Tóm tắt", R.color.brand_blue_dark, R.drawable.bg_action_chip_blue,
+                    () -> openHistorySummary(item));
+        }
+        if (item.latestAttempt != null) {
+            addHistoryAction(primaryActions, "Xem quiz", R.color.brand_blue_dark, R.drawable.bg_action_chip_blue,
+                    () -> openQuizAttemptResult(item));
+        }
+        if (primaryActions.getChildCount() > 0) {
+            content.addView(primaryActions);
+        }
+
+        LinearLayout dangerActions = createActionRow();
+        if (item.attemptCount > 0) {
+            addHistoryAction(dangerActions, "Xóa lần quiz", R.color.danger, R.drawable.bg_action_chip_danger,
+                    () -> confirmDeleteQuizHistory(item));
+        }
+        if (dangerActions.getChildCount() > 0) {
+            content.addView(dangerActions);
+        }
+
+        card.addView(content);
+        UiViewFactory.animateIn(card, index);
+        return card;
+    }
+
+    private LinearLayout createActionRow() {
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, UiViewFactory.dp(activity, 12), 0, 0);
-        addHistoryAction(actions, "Mở tài liệu", () -> openHistoryDocument(item));
-        if (item.summaryCount > 0) {
-            addHistoryAction(actions, "Tóm tắt", () -> openHistorySummary(item));
-        }
-        if (item.questionCount > 0) {
-            addHistoryAction(actions, "Câu hỏi", () -> openHistoryQuestionBank(item));
-        }
-        content.addView(actions);
-
-        card.addView(content);
-        container.addView(card, UiViewFactory.verticalMargin(activity, 12));
-        UiViewFactory.animateIn(card, index);
+        return actions;
     }
 
-    private void addHistoryAction(LinearLayout actions, String label, Runnable action) {
-        TextView actionView = UiViewFactory.createText(activity, label, 13, R.color.brand_blue_dark, true);
+    private void addHistoryAction(LinearLayout actions, String label, int colorRes, int backgroundRes,
+                                  Runnable action) {
+        TextView actionView = UiViewFactory.createText(activity, label, 13, colorRes, true);
         actionView.setGravity(android.view.Gravity.CENTER);
-        actionView.setBackgroundResource(R.drawable.bg_action_chip_blue);
+        actionView.setBackgroundResource(backgroundRes);
         actionView.setPadding(
                 UiViewFactory.dp(activity, 10),
                 UiViewFactory.dp(activity, 8),
@@ -364,23 +290,107 @@ class HistoryController {
     }
 
     private void openHistoryDocument(LearningHistoryItem item) {
-        activity.selectedSubjectId = item.document.subject_id;
-        activity.selectedSubject = item.subject;
-        activity.selectedDocument = item.document;
+        setSelectedHistoryDocument(item);
         activity.showProcessDocument();
     }
 
     private void openHistorySummary(LearningHistoryItem item) {
-        activity.selectedSubjectId = item.document.subject_id;
-        activity.selectedSubject = item.subject;
-        activity.selectedDocument = item.document;
+        setSelectedHistoryDocument(item);
         activity.showSummary();
     }
 
-    private void openHistoryQuestionBank(LearningHistoryItem item) {
+    private void openQuizAttemptResult(LearningHistoryItem item) {
+        if (item.latestAttempt == null) {
+            Toast.makeText(activity, "Tài liệu này chưa có lần làm quiz", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        activity.studyRepository.getQuizAttemptAnswers(
+                item.latestAttempt.id,
+                new RepositoryCallback<List<QuizAttemptAnswer>>() {
+                    @Override
+                    public void onSuccess(List<QuizAttemptAnswer> answers) {
+                        if (answers.isEmpty()) {
+                            Toast.makeText(activity, "Lần làm quiz cũ chưa có chi tiết đáp án", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        setSelectedHistoryDocument(item);
+                        activity.latestQuizAttempt = item.latestAttempt;
+                        activity.currentQuizQuestions = convertAnswersToQuestions(answers);
+                        activity.selectedQuizAnswers.clear();
+                        for (QuizAttemptAnswer answer : answers) {
+                            long questionId = answer.question_id > 0 ? answer.question_id : answer.id;
+                            activity.selectedQuizAnswers.put(questionId, answer.selectedOption);
+                        }
+                        activity.showQuizResult();
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Toast.makeText(activity, "Không thể tải chi tiết lần làm quiz", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+    }
+
+    private List<StudyQuestion> convertAnswersToQuestions(List<QuizAttemptAnswer> answers) {
+        List<StudyQuestion> questions = new ArrayList<>();
+        for (QuizAttemptAnswer answer : answers) {
+            StudyQuestion question = new StudyQuestion(
+                    answer.document_id,
+                    answer.questionText,
+                    answer.optionA,
+                    answer.optionB,
+                    answer.optionC,
+                    answer.optionD,
+                    answer.correctOption,
+                    answer.explanation,
+                    answer.questionOrder
+            );
+            question.id = answer.question_id > 0 ? answer.question_id : answer.id;
+            questions.add(question);
+        }
+        return questions;
+    }
+
+    private void setSelectedHistoryDocument(LearningHistoryItem item) {
         activity.selectedSubjectId = item.document.subject_id;
         activity.selectedSubject = item.subject;
         activity.selectedDocument = item.document;
-        activity.renderQuestionBankScreen();
+        activity.documentOpenedFromHistory = true;
     }
+
+    private void confirmDeleteQuizHistory(LearningHistoryItem item) {
+        new AlertDialog.Builder(activity)
+                .setTitle("Xóa lần làm quiz?")
+                .setMessage("Chỉ xóa lần làm quiz gần nhất đang hiển thị. Tài liệu, OCR, tóm tắt và câu hỏi vẫn giữ nguyên.")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> deleteQuizHistory(item))
+                .show();
+    }
+
+    private void deleteQuizHistory(LearningHistoryItem item) {
+        if (item.latestAttempt == null) {
+            Toast.makeText(activity, "Không có lần làm quiz để xóa", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        activity.studyRepository.deleteQuizAttempt(
+                item.latestAttempt,
+                new RepositoryCallback<Integer>() {
+                    @Override
+                    public void onSuccess(Integer result) {
+                        Toast.makeText(activity, "Đã xóa lần làm quiz", Toast.LENGTH_SHORT).show();
+                        showHistory();
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        Toast.makeText(activity, "Không thể xóa lịch sử quiz", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+    }
+
 }

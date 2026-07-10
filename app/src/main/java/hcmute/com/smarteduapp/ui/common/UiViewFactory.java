@@ -9,6 +9,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
 
@@ -65,6 +67,14 @@ public final class UiViewFactory {
                 .setStartDelay(Math.min(index, 6) * 35L)
                 .setDuration(220)
                 .start();
+    }
+
+    public static void setupVerticalRecycler(RecyclerView recyclerView) {
+        if (recyclerView.getLayoutManager() == null) {
+            recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
+        }
+        recyclerView.setNestedScrollingEnabled(false);
+        recyclerView.setItemAnimator(null);
     }
 
     public static TextView createText(Context context, String text, int sizeSp,

@@ -45,7 +45,6 @@ import hcmute.com.smarteduapp.data.repository.SubjectRepository;
 import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 import hcmute.com.smarteduapp.ui.document.DocumentAttachmentUi;
 import hcmute.com.smarteduapp.ui.study.ChatMessageRenderer;
-import hcmute.com.smarteduapp.ui.study.QuestionBankRenderer;
 import hcmute.com.smarteduapp.ui.study.QuizUiRenderer;
 import hcmute.com.smarteduapp.ui.subject.SubjectListRenderer;
 import hcmute.com.smarteduapp.data.repository.StudyRepository;
@@ -78,7 +77,6 @@ public class MainActivity extends AppCompatActivity {
     HomeDashboardRenderer homeDashboardRenderer;
     DocumentAttachmentUi documentAttachmentUi;
     ChatMessageRenderer chatMessageRenderer;
-    QuestionBankRenderer questionBankRenderer;
     QuizUiRenderer quizUiRenderer;
     SubjectListRenderer subjectListRenderer;
     HistoryController historyController;
@@ -90,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
     final LinkedHashMap<Long, Subject> recentSubjects = new LinkedHashMap<>();
     QuizAttempt latestQuizAttempt;
     StudySummary latestDisplayedSummary;
+    boolean documentOpenedFromHistory;
     Uri selectedDocumentImageUri;
     Uri pendingCameraImageUri;
     ActivityResultLauncher<String[]> documentImagePickerLauncher;
@@ -114,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
         homeDashboardRenderer = new HomeDashboardRenderer(this);
         documentAttachmentUi = new DocumentAttachmentUi(this);
         chatMessageRenderer = new ChatMessageRenderer(this);
-        questionBankRenderer = new QuestionBankRenderer(this);
         quizUiRenderer = new QuizUiRenderer(this);
         subjectListRenderer = new SubjectListRenderer(this);
         historyController = new HistoryController(this);
@@ -209,6 +207,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void openDocument(long id) {
+        documentOpenedFromHistory = false;
         documentController.openDocument(id);
     }
 
@@ -400,14 +399,6 @@ public class MainActivity extends AppCompatActivity {
 
     void createQuizFromCurrentDocument() {
         studyController.createQuizFromCurrentDocument();
-    }
-
-    void showQuestionBank() {
-        studyController.showQuestionBank();
-    }
-
-    void renderQuestionBankScreen() {
-        studyController.renderQuestionBankScreen();
     }
 
     void showQuestions() {
