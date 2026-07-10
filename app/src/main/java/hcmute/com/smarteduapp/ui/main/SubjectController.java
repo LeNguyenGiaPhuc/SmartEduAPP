@@ -61,8 +61,6 @@ class SubjectController {
         activity.setContentView(R.layout.screen_subject_detail);
         activity.applySystemBars();
 
-        activity.findViewById(R.id.cardActivityDocument).setVisibility(View.GONE);
-        activity.findViewById(R.id.cardPendingDocument).setVisibility(View.GONE);
         activity.bindClick(R.id.backHomeFromSubject, activity::showHome);
         activity.bindClick(R.id.buttonEditSubject, () -> activity.showSubjectForm(activity.selectedSubjectId));
         activity.bindClick(R.id.buttonAddDocument, activity::showDocumentForm);

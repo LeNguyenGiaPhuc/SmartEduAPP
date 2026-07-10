@@ -89,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
     QuizAttempt latestQuizAttempt;
     StudySummary latestDisplayedSummary;
     boolean documentOpenedFromHistory;
+    boolean quizResultOpenedFromHome;
     Uri selectedDocumentImageUri;
     Uri pendingCameraImageUri;
     ActivityResultLauncher<String[]> documentImagePickerLauncher;
@@ -208,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
 
     void openDocument(long id) {
         documentOpenedFromHistory = false;
+        quizResultOpenedFromHome = false;
         documentController.openDocument(id);
     }
 
@@ -227,6 +229,8 @@ public class MainActivity extends AppCompatActivity {
         currentScreen = R.layout.activity_main;
         setContentView(R.layout.activity_main);
         applySystemBars();
+        documentOpenedFromHistory = false;
+        quizResultOpenedFromHome = false;
 
         bindClick(R.id.buttonOpenHomeMenu, this::showHomeMenu);
         bindClick(R.id.buttonCloseHomeMenu, this::hideHomeMenu);
@@ -362,14 +366,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void renderHomeQuizHistory(List<StudyDocument> documents, List<QuizAttempt> attempts) {
         homeDashboardRenderer.renderHomeQuizHistory(documents, attempts, (document, attempt) -> {
-            if (document == null) {
+            if (document == null || attempt == null) {
                 showHistory();
                 return;
             }
-            selectedSubjectId = document.subject_id;
-            selectedDocument = document;
-            latestQuizAttempt = attempt;
-            showHistory();
+            historyController.openQuizAttemptResult(document, attempt, true);
         });
     }
 
@@ -418,6 +419,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void showHistory() {
+        quizResultOpenedFromHome = false;
         historyController.showHistory();
     }
 

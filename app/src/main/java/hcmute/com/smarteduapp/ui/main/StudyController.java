@@ -562,6 +562,11 @@ class StudyController {
 
 
     void goBackFromQuizResult() {
+        if (activity.quizResultOpenedFromHome) {
+            activity.quizResultOpenedFromHome = false;
+            activity.showHome();
+            return;
+        }
         if (activity.documentOpenedFromHistory) {
             activity.documentOpenedFromHistory = false;
             activity.showHistory();

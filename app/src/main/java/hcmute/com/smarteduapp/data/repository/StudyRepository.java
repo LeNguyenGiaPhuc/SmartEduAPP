@@ -104,43 +104,10 @@ public class StudyRepository {
     });
     }
 
-    public void getAllQuestions(RepositoryCallback<List<StudyQuestion>> callback) {
-        executor.execute(() -> {
-            try {
-                List<StudyQuestion> questions = questionDao.getAll();
-                mainHandler.post(() -> callback.onSuccess(questions));
-            } catch (Exception exception) {
-                mainHandler.post(() -> callback.onError(exception));
-            }
-        });
-    }
-
-    public void updateQuestion(StudyQuestion question, RepositoryCallback<Integer> callback) {
-        executor.execute(() -> {
-            try {
-                int result = questionDao.update(question);
-                mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception exception) {
-                mainHandler.post(() -> callback.onError(exception));
-            }
-        });
-    }
-
     public void deleteSummary(StudySummary summary, RepositoryCallback<Integer> callback) {
         executor.execute(() -> {
             try {
                 int result = summaryDao.delete(summary);
-                mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception exception) {
-                mainHandler.post(() -> callback.onError(exception));
-            }
-        });
-    }
-
-    public void deleteQuestion(StudyQuestion question, RepositoryCallback<Integer> callback) {
-        executor.execute(() -> {
-            try {
-                int result = questionDao.delete(question);
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
@@ -158,17 +125,6 @@ public class StudyRepository {
                 deletedCount += quizAttemptDao.deleteByDocumentId(documentId);
                 int result = deletedCount;
                 mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception exception) {
-                mainHandler.post(() -> callback.onError(exception));
-            }
-        });
-    }
-
-    public void createQuizAttempt(QuizAttempt attempt, RepositoryCallback<Long> callback) {
-        executor.execute(() -> {
-            try {
-                long id = quizAttemptDao.insert(attempt);
-                mainHandler.post(() -> callback.onSuccess(id));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
             }
@@ -220,19 +176,6 @@ public class StudyRepository {
             try {
                 int deletedCount = quizAttemptAnswerDao.deleteByAttemptId(attempt.id);
                 deletedCount += quizAttemptDao.delete(attempt);
-                int result = deletedCount;
-                mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception exception) {
-                mainHandler.post(() -> callback.onError(exception));
-            }
-        });
-    }
-
-    public void deleteQuizAttemptsByDocumentId(long documentId, RepositoryCallback<Integer> callback) {
-        executor.execute(() -> {
-            try {
-                int deletedCount = quizAttemptAnswerDao.deleteByDocumentId(documentId);
-                deletedCount += quizAttemptDao.deleteByDocumentId(documentId);
                 int result = deletedCount;
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {

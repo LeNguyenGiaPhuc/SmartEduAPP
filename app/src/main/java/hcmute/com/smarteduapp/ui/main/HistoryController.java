@@ -300,13 +300,21 @@ class HistoryController {
     }
 
     private void openQuizAttemptResult(LearningHistoryItem item) {
-        if (item.latestAttempt == null) {
+        openQuizAttemptResult(item.document, item.subject, item.latestAttempt, false);
+    }
+
+    void openQuizAttemptResult(StudyDocument document, QuizAttempt attempt, boolean openedFromHome) {
+        openQuizAttemptResult(document, null, attempt, openedFromHome);
+    }
+
+    private void openQuizAttemptResult(StudyDocument document, Subject subject, QuizAttempt attempt, boolean openedFromHome) {
+        if (document == null || attempt == null) {
             Toast.makeText(activity, "Tài liệu này chưa có lần làm quiz", Toast.LENGTH_SHORT).show();
             return;
         }
 
         activity.studyRepository.getQuizAttemptAnswers(
-                item.latestAttempt.id,
+                attempt.id,
                 new RepositoryCallback<List<QuizAttemptAnswer>>() {
                     @Override
                     public void onSuccess(List<QuizAttemptAnswer> answers) {
@@ -315,8 +323,12 @@ class HistoryController {
                             return;
                         }
 
-                        setSelectedHistoryDocument(item);
-                        activity.latestQuizAttempt = item.latestAttempt;
+                        activity.selectedSubjectId = document.subject_id;
+                        activity.selectedSubject = subject;
+                        activity.selectedDocument = document;
+                        activity.documentOpenedFromHistory = !openedFromHome;
+                        activity.quizResultOpenedFromHome = openedFromHome;
+                        activity.latestQuizAttempt = attempt;
                         activity.currentQuizQuestions = convertAnswersToQuestions(answers);
                         activity.selectedQuizAnswers.clear();
                         for (QuizAttemptAnswer answer : answers) {

@@ -127,7 +127,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:text="Làm quiz ngay"
+            android:text="Tạo quiz"
             android:textColor="@color/white"
             android:textSize="17sp"
             android:textStyle="bold" />
