@@ -20,7 +20,7 @@ import java.util.List;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
-import hcmute.com.smarteduapp.data.local.entity.StudyDocumentImage;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
 import hcmute.com.smarteduapp.service.document.DocumentTextScannerService;
 import hcmute.com.smarteduapp.ui.document.DocumentAttachmentUi;
@@ -45,7 +45,7 @@ class DocumentController {
             // Some providers do not expose persistable permissions. The URI is still usable
             // during the current app session, while ACTION_OPEN_DOCUMENT providers persist.
         }
-        activity.selectedDocumentImageUri = uri;
+        activity.selectedDocumentAttachmentUri = uri;
         updateSelectedImageLabel();
     }
 
@@ -60,8 +60,8 @@ class DocumentController {
             activity.showHome();
             return;
         }
-        activity.selectedDocumentImageUri = null;
-        activity.pendingCameraImageUri = null;
+        activity.selectedDocumentAttachmentUri = null;
+        activity.pendingCameraAttachmentUri = null;
         boolean isEditing = documentId > 0;
         activity.currentScreen = R.layout.screen_document_form;
         activity.setContentView(R.layout.screen_document_form);
@@ -101,22 +101,22 @@ class DocumentController {
             titleInput.setError("Nhập tên tài liệu");
             return;
         }
-        String imageUri = activity.selectedDocumentImageUri == null ? null : activity.selectedDocumentImageUri.toString();
+        String attachmentUri = activity.selectedDocumentAttachmentUri == null ? null : activity.selectedDocumentAttachmentUri.toString();
         if (documentId > 0) {
-            updateDocument(documentId, title, imageUri);
+            updateDocument(documentId, title, attachmentUri);
             return;
         }
 
         activity.documentRepository.create(activity.selectedSubjectId, title, null, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
-                if (activity.isBlank(imageUri)) {
+                if (activity.isBlank(attachmentUri)) {
                     activity.showSubjectDetail();
                     return;
                 }
-                activity.documentRepository.addImage(id, imageUri, new RepositoryCallback<Long>() {
+                activity.documentRepository.addAttachment(id, attachmentUri, new RepositoryCallback<Long>() {
                     @Override
-                    public void onSuccess(Long imageId) {
+                    public void onSuccess(Long attachmentId) {
                         activity.showSubjectDetail();
                     }
 
@@ -137,26 +137,26 @@ class DocumentController {
     }
 
 
-    void updateDocument(long documentId, String title, String imageUri) {
+    void updateDocument(long documentId, String title, String attachmentUri) {
         if (activity.selectedDocument == null || activity.selectedDocument.id != documentId) {
             Toast.makeText(activity, "Không tìm thấy tài liệu để cập nhật", Toast.LENGTH_SHORT).show();
             return;
         }
 
         activity.selectedDocument.title = title;
-        activity.selectedDocument.imageUri = null;
+        activity.selectedDocument.legacyAttachmentUri = null;
         activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                if (activity.isBlank(imageUri)) {
+                if (activity.isBlank(attachmentUri)) {
                     Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
                     showProcessDocument();
                     return;
                 }
-                activity.documentRepository.addImage(documentId, imageUri, new RepositoryCallback<Long>() {
+                activity.documentRepository.addAttachment(documentId, attachmentUri, new RepositoryCallback<Long>() {
                     @Override
-                    public void onSuccess(Long imageId) {
-                        activity.selectedDocumentImageUri = null;
+                    public void onSuccess(Long attachmentId) {
+                        activity.selectedDocumentAttachmentUri = null;
                         Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
                         showProcessDocument();
                     }
@@ -193,8 +193,8 @@ class DocumentController {
 
     void captureDocumentImage() {
         try {
-            activity.pendingCameraImageUri = createCameraImageUri();
-            activity.cameraCaptureLauncher.launch(activity.pendingCameraImageUri);
+            activity.pendingCameraAttachmentUri = createCameraImageUri();
+            activity.cameraCaptureLauncher.launch(activity.pendingCameraAttachmentUri);
         } catch (IOException exception) {
             Toast.makeText(activity, "Không thể tạo file ảnh", Toast.LENGTH_SHORT).show();
         }
@@ -228,11 +228,11 @@ class DocumentController {
         if (label == null) {
             return;
         }
-        if (activity.selectedDocumentImageUri == null) {
+        if (activity.selectedDocumentAttachmentUri == null) {
             label.setText("Chưa chọn ảnh hoặc file tài liệu");
             return;
         }
-        label.setText(getDocumentAttachmentLabel(activity.selectedDocumentImageUri.toString()));
+        label.setText(getDocumentAttachmentLabel(activity.selectedDocumentAttachmentUri.toString()));
     }
 
 
@@ -267,7 +267,7 @@ class DocumentController {
                 textContentStatus.setText("Đã có nội dung được quét. Bạn có thể xem nội dung hoặc dùng AI.");
             }
             showDocumentImage(null, imagePreview, imagePlaceholder);
-            loadDocumentImages(activity.selectedDocument.id);
+            loadDocumentAttachments(activity.selectedDocument.id);
         }
 
         activity.bindClick(R.id.backHome, this::goBackFromProcessDocument);
@@ -282,7 +282,7 @@ class DocumentController {
         activity.bindClick(R.id.buttonCreateQuiz, activity::createQuizFromCurrentDocument);
         activity.bindClick(R.id.buttonExplain, activity::showAiChat);
         activity.bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
-        activity.bindClick(R.id.buttonAddMoreImages, () -> activity.addMoreImagesPickerLauncher.launch(new String[]{
+        activity.bindClick(R.id.buttonAddMoreImages, () -> activity.addMoreAttachmentsPickerLauncher.launch(new String[]{
                 "image/*",
                 "application/pdf",
                 "text/plain",
@@ -301,11 +301,6 @@ class DocumentController {
     }
 
 
-    void createExplanationFromCurrentDocument() {
-        activity.showAiChat();
-    }
-
-
     void ensureCurrentDocumentHasAttachments(String unavailableMessage, Runnable action) {
         if (activity.selectedDocument == null) {
             activity.showSubjectDetail();
@@ -318,18 +313,18 @@ class DocumentController {
             public void onSuccess(StudyDocument document) {
                 if (document == null) {
                     activity.selectedDocument = null;
-                    activity.selectedDocumentImages = new ArrayList<>();
+                    activity.selectedDocumentAttachments = new ArrayList<>();
                     Toast.makeText(activity, "Tài liệu đã bị xóa", Toast.LENGTH_SHORT).show();
                     activity.showSubjectDetail();
                     return;
                 }
 
-                activity.documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
+                activity.documentRepository.getAttachmentsByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentAttachment>>() {
                     @Override
-                    public void onSuccess(List<StudyDocumentImage> images) {
+                    public void onSuccess(List<StudyDocumentAttachment> attachments) {
                         activity.selectedDocument = document;
-                        activity.selectedDocumentImages = images;
-                        if (images.isEmpty()) {
+                        activity.selectedDocumentAttachments = attachments;
+                        if (attachments.isEmpty()) {
                             Toast.makeText(activity, unavailableMessage, Toast.LENGTH_SHORT).show();
                             clearGeneratedStateForCurrentDocument(false);
                             return;
@@ -352,16 +347,16 @@ class DocumentController {
     }
 
 
-    void loadDocumentImages(long documentId) {
-        activity.documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
+    void loadDocumentAttachments(long documentId) {
+        activity.documentRepository.getAttachmentsByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentAttachment>>() {
             @Override
-            public void onSuccess(List<StudyDocumentImage> images) {
-                if (activity.selectedDocument != null && !activity.isBlank(activity.selectedDocument.imageUri)) {
-                    migrateLegacyDocumentAttachment(images);
+            public void onSuccess(List<StudyDocumentAttachment> attachments) {
+                if (activity.selectedDocument != null && !activity.isBlank(activity.selectedDocument.legacyAttachmentUri)) {
+                    migrateLegacyDocumentAttachment(attachments);
                     return;
                 }
-                activity.selectedDocumentImages = images;
-                renderThumbnails(images);
+                activity.selectedDocumentAttachments = attachments;
+                renderThumbnails(attachments);
             }
             @Override
             public void onError(Exception e) {}
@@ -369,45 +364,45 @@ class DocumentController {
     }
 
 
-    void migrateLegacyDocumentAttachment(List<StudyDocumentImage> existingImages) {
-        if (activity.selectedDocument == null || activity.isBlank(activity.selectedDocument.imageUri)) {
-            activity.selectedDocumentImages = existingImages;
-            renderThumbnails(existingImages);
+    void migrateLegacyDocumentAttachment(List<StudyDocumentAttachment> existingAttachments) {
+        if (activity.selectedDocument == null || activity.isBlank(activity.selectedDocument.legacyAttachmentUri)) {
+            activity.selectedDocumentAttachments = existingAttachments;
+            renderThumbnails(existingAttachments);
             return;
         }
 
-        String legacyUri = activity.selectedDocument.imageUri;
-        activity.documentRepository.addImage(activity.selectedDocument.id, legacyUri, new RepositoryCallback<Long>() {
+        String legacyUri = activity.selectedDocument.legacyAttachmentUri;
+        activity.documentRepository.addAttachment(activity.selectedDocument.id, legacyUri, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
-                activity.selectedDocument.imageUri = null;
+                activity.selectedDocument.legacyAttachmentUri = null;
                 activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
                     @Override
                     public void onSuccess(Integer result) {
-                        loadDocumentImages(activity.selectedDocument.id);
+                        loadDocumentAttachments(activity.selectedDocument.id);
                     }
 
                     @Override
                     public void onError(Exception exception) {
-                        loadDocumentImages(activity.selectedDocument.id);
+                        loadDocumentAttachments(activity.selectedDocument.id);
                     }
                 });
             }
 
             @Override
             public void onError(Exception exception) {
-                activity.selectedDocumentImages = existingImages;
-                renderThumbnails(existingImages);
+                activity.selectedDocumentAttachments = existingAttachments;
+                renderThumbnails(existingAttachments);
             }
         });
     }
 
 
-    void renderThumbnails(List<StudyDocumentImage> images) {
-        activity.documentAttachmentUi.renderThumbnails(images, new DocumentAttachmentUi.AttachmentCallbacks() {
+    void renderThumbnails(List<StudyDocumentAttachment> attachments) {
+        activity.documentAttachmentUi.renderThumbnails(attachments, new DocumentAttachmentUi.AttachmentCallbacks() {
             @Override
-            public void onDeleteAttachment(StudyDocumentImage image) {
-                confirmDeleteAttachment(image);
+            public void onDeleteAttachment(StudyDocumentAttachment attachment) {
+                confirmDeleteAttachment(attachment);
             }
 
             @Override
@@ -499,18 +494,18 @@ class DocumentController {
     }
 
 
-    void confirmDeleteAttachment(StudyDocumentImage image) {
+    void confirmDeleteAttachment(StudyDocumentAttachment attachment) {
         new AlertDialog.Builder(activity)
                 .setTitle("Xóa tài liệu đính kèm")
                 .setMessage("Bạn có muốn xóa file/ảnh này khỏi bài học không?")
-                .setPositiveButton("Xóa", (dialog, which) -> deleteAttachment(image))
+                .setPositiveButton("Xóa", (dialog, which) -> deleteAttachment(attachment))
                 .setNegativeButton("Hủy", null)
                 .show();
     }
 
 
-    void deleteAttachment(StudyDocumentImage image) {
-        activity.documentRepository.deleteImage(image, new RepositoryCallback<Integer>() {
+    void deleteAttachment(StudyDocumentAttachment attachment) {
+        activity.documentRepository.deleteAttachment(attachment, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
                 Toast.makeText(activity, "Đã xóa tài liệu đính kèm", Toast.LENGTH_SHORT).show();
@@ -528,20 +523,20 @@ class DocumentController {
 
 
     void refreshAttachmentsAfterDelete(long documentId) {
-        activity.documentRepository.getImagesByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentImage>>() {
+        activity.documentRepository.getAttachmentsByDocumentId(documentId, new RepositoryCallback<List<StudyDocumentAttachment>>() {
             @Override
-            public void onSuccess(List<StudyDocumentImage> images) {
-                activity.selectedDocumentImages = images;
-                if (images.isEmpty()) {
+            public void onSuccess(List<StudyDocumentAttachment> attachments) {
+                activity.selectedDocumentAttachments = attachments;
+                if (attachments.isEmpty()) {
                     clearGeneratedStateForCurrentDocument(true);
                     return;
                 }
-                renderThumbnails(images);
+                renderThumbnails(attachments);
             }
 
             @Override
             public void onError(Exception exception) {
-                loadDocumentImages(documentId);
+                loadDocumentAttachments(documentId);
             }
         });
     }
@@ -638,9 +633,9 @@ class DocumentController {
         }
 
         List<String> attachmentUris = new ArrayList<>();
-        for (StudyDocumentImage img : activity.selectedDocumentImages) {
-            if (!activity.isBlank(img.imageUri)) {
-                attachmentUris.add(img.imageUri);
+        for (StudyDocumentAttachment attachment : activity.selectedDocumentAttachments) {
+            if (!activity.isBlank(attachment.attachmentUri)) {
+                attachmentUris.add(attachment.attachmentUri);
             }
         }
 

@@ -37,7 +37,7 @@ import java.io.IOException;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
-import hcmute.com.smarteduapp.data.local.entity.StudyDocumentImage;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 import hcmute.com.smarteduapp.data.local.entity.Subject;
 import hcmute.com.smarteduapp.data.repository.DocumentRepository;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
@@ -90,13 +90,13 @@ public class MainActivity extends AppCompatActivity {
     StudySummary latestDisplayedSummary;
     boolean documentOpenedFromHistory;
     boolean quizResultOpenedFromHome;
-    Uri selectedDocumentImageUri;
-    Uri pendingCameraImageUri;
+    Uri selectedDocumentAttachmentUri;
+    Uri pendingCameraAttachmentUri;
     ActivityResultLauncher<String[]> documentImagePickerLauncher;
     ActivityResultLauncher<String[]> documentFilePickerLauncher;
     ActivityResultLauncher<Uri> cameraCaptureLauncher;
-    ActivityResultLauncher<String[]> addMoreImagesPickerLauncher;
-    List<StudyDocumentImage> selectedDocumentImages = new ArrayList<>();
+    ActivityResultLauncher<String[]> addMoreAttachmentsPickerLauncher;
+    List<StudyDocumentAttachment> selectedDocumentAttachments = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
 
-        addMoreImagesPickerLauncher = registerForActivityResult(
+        addMoreAttachmentsPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocument(),
                 uri -> {
                     if (uri == null || selectedDocument == null) return;
@@ -154,10 +154,10 @@ public class MainActivity extends AppCompatActivity {
                         getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     } catch (Exception ignored) {}
                     
-                    documentRepository.addImage(selectedDocument.id, uri.toString(), new RepositoryCallback<Long>() {
+                    documentRepository.addAttachment(selectedDocument.id, uri.toString(), new RepositoryCallback<Long>() {
                         @Override
                         public void onSuccess(Long id) {
-                            loadDocumentImages(selectedDocument.id);
+                            loadDocumentAttachments(selectedDocument.id);
                         }
                         @Override
                         public void onError(Exception e) {
@@ -180,12 +180,12 @@ public class MainActivity extends AppCompatActivity {
         cameraCaptureLauncher = registerForActivityResult(
                 new ActivityResultContracts.TakePicture(),
                 success -> {
-                            if (Boolean.TRUE.equals(success) && pendingCameraImageUri != null) {
-                                selectedDocumentImageUri = pendingCameraImageUri;
+                            if (Boolean.TRUE.equals(success) && pendingCameraAttachmentUri != null) {
+                                selectedDocumentAttachmentUri = pendingCameraAttachmentUri;
                                 updateSelectedImageLabel();
                         return;
                     }
-                    pendingCameraImageUri = null;
+                    pendingCameraAttachmentUri = null;
                     Toast.makeText(this, "Không chụp được ảnh", Toast.LENGTH_SHORT).show();
                 }
         );
@@ -221,8 +221,8 @@ public class MainActivity extends AppCompatActivity {
         documentController.ensureCurrentDocumentHasAttachments(unavailableMessage, action);
     }
 
-    void loadDocumentImages(long documentId) {
-        documentController.loadDocumentImages(documentId);
+    void loadDocumentAttachments(long documentId) {
+        documentController.loadDocumentAttachments(documentId);
     }
 
     void showHome() {
@@ -408,14 +408,6 @@ public class MainActivity extends AppCompatActivity {
 
     void showQuizResult() {
         studyController.showQuizResult();
-    }
-
-    private void addChatMessage(String sender, String message, boolean isUser) {
-        chatMessageRenderer.addMessage(sender, message, isUser);
-    }
-
-    private void removeLastChatMessage() {
-        chatMessageRenderer.removeLastMessage();
     }
 
     void showHistory() {

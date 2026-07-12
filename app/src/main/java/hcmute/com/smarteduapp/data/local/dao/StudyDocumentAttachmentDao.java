@@ -8,21 +8,21 @@ import androidx.room.Update;
 
 import java.util.List;
 
-import hcmute.com.smarteduapp.data.local.entity.StudyDocumentImage;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 
 @Dao
-public interface StudyDocumentImageDao {
+public interface StudyDocumentAttachmentDao {
     @Query("SELECT * FROM document_images WHERE document_id = :documentId ORDER BY orderIndex ASC")
-    List<StudyDocumentImage> getByDocumentId(long documentId);
+    List<StudyDocumentAttachment> getByDocumentId(long documentId);
 
     @Insert
-    long insert(StudyDocumentImage image);
+    long insert(StudyDocumentAttachment attachment);
 
     @Update
-    int update(StudyDocumentImage image);
+    int update(StudyDocumentAttachment attachment);
 
     @Delete
-    int delete(StudyDocumentImage image);
+    int delete(StudyDocumentAttachment attachment);
 
     @Query("DELETE FROM document_images WHERE document_id = :documentId")
     void deleteByDocumentId(long documentId);

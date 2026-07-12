@@ -20,7 +20,6 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import hcmute.com.smarteduapp.service.ocr.BatchOcrService;
 import hcmute.com.smarteduapp.service.ocr.MlKitOcrService;
 
 /**
@@ -30,94 +29,15 @@ import hcmute.com.smarteduapp.service.ocr.MlKitOcrService;
  */
 public class DocumentTextScannerService {
     private final MlKitOcrService ocrService;
-    private final BatchOcrService batchOcrService;
 
     public DocumentTextScannerService(MlKitOcrService ocrService) {
         this.ocrService = ocrService;
-        this.batchOcrService = new BatchOcrService(ocrService);
     }
 
     public interface ScanCallback {
         void onSuccess(String text);
 
         void onError(Exception exception);
-    }
-
-    public void scan(
-            Context context,
-            String primaryAttachmentUri,
-            List<String> extraImageUris,
-            ScanCallback callback
-    ) {
-        List<String> safeExtraImages = extraImageUris == null
-                ? new ArrayList<>()
-                : new ArrayList<>(extraImageUris);
-
-        if (isBlank(primaryAttachmentUri)) {
-            scanExtraImages(context, safeExtraImages, callback);
-            return;
-        }
-
-        String mimeType = getMimeType(context, primaryAttachmentUri);
-        if (isImageAttachment(primaryAttachmentUri, mimeType)) {
-            List<String> imageUris = new ArrayList<>();
-            imageUris.add(primaryAttachmentUri);
-            imageUris.addAll(safeExtraImages);
-            batchOcrService.recognizeImages(context, imageUris, new BatchOcrService.BatchOcrCallback() {
-                @Override
-                public void onSuccess(String text) {
-                    callback.onSuccess(text);
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    callback.onError(exception);
-                }
-            });
-            return;
-        }
-
-        if (isPlainText(primaryAttachmentUri, mimeType)) {
-            try {
-                String text = readTextFile(context, Uri.parse(primaryAttachmentUri));
-                scanExtraImagesAndMerge(context, safeExtraImages, text, callback);
-            } catch (Exception exception) {
-                callback.onError(exception);
-            }
-            return;
-        }
-
-        if (isDocx(primaryAttachmentUri, mimeType)) {
-            try {
-                String text = readDocxFile(context, Uri.parse(primaryAttachmentUri));
-                scanExtraImagesAndMerge(context, safeExtraImages, text, callback);
-            } catch (Exception exception) {
-                callback.onError(exception);
-            }
-            return;
-        }
-
-        if (isPdf(primaryAttachmentUri, mimeType)) {
-            scanPdf(context, Uri.parse(primaryAttachmentUri), new ScanCallback() {
-                @Override
-                public void onSuccess(String pdfText) {
-                    scanExtraImagesAndMerge(context, safeExtraImages, pdfText, callback);
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    callback.onError(exception);
-                }
-            });
-            return;
-        }
-
-        if (!safeExtraImages.isEmpty()) {
-            scanExtraImages(context, safeExtraImages, callback);
-            return;
-        }
-
-        callback.onError(new UnsupportedOperationException("File này hiện chưa hỗ trợ quét nội dung"));
     }
 
     public void scanAttachments(Context context, List<String> attachmentUris, ScanCallback callback) {
@@ -196,48 +116,6 @@ public class DocumentTextScannerService {
         }
 
         scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
-    }
-
-    private void scanExtraImages(Context context, List<String> extraImageUris, ScanCallback callback) {
-        if (extraImageUris == null || extraImageUris.isEmpty()) {
-            callback.onError(new IllegalArgumentException("Tài liệu chưa có ảnh/file hợp lệ để quét"));
-            return;
-        }
-        batchOcrService.recognizeImages(context, extraImageUris, new BatchOcrService.BatchOcrCallback() {
-            @Override
-            public void onSuccess(String text) {
-                callback.onSuccess(text);
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                callback.onError(exception);
-            }
-        });
-    }
-
-    private void scanExtraImagesAndMerge(
-            Context context,
-            List<String> extraImageUris,
-            String baseText,
-            ScanCallback callback
-    ) {
-        if (extraImageUris == null || extraImageUris.isEmpty()) {
-            callback.onSuccess(baseText == null ? "" : baseText.trim());
-            return;
-        }
-
-        batchOcrService.recognizeImages(context, extraImageUris, new BatchOcrService.BatchOcrCallback() {
-            @Override
-            public void onSuccess(String imageText) {
-                callback.onSuccess(mergeText(baseText, imageText));
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                callback.onSuccess(baseText == null ? "" : baseText.trim());
-            }
-        });
     }
 
     private String readTextFile(Context context, Uri uri) throws Exception {
@@ -364,16 +242,6 @@ public class DocumentTextScannerService {
             builder.append("\n\n");
         }
         builder.append(text.trim());
-    }
-
-    private String mergeText(String first, String second) {
-        if (isBlank(first)) {
-            return second == null ? "" : second.trim();
-        }
-        if (isBlank(second)) {
-            return first.trim();
-        }
-        return first.trim() + "\n\n" + second.trim();
     }
 
     private String getMimeType(Context context, String uriText) {

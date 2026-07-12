@@ -97,14 +97,14 @@ public class GeminiService {
         }
     }
 
-    public void generateQuiz(String ocrText, GeminiCallback callback) {
+    public void generateQuiz(String ocrText, int questionCount, GeminiCallback callback) {
         if (BuildConfig.GEMINI_API_KEY.trim().isEmpty()) {
             callback.onError(new IllegalStateException("Missing Gemini API key"));
             return;
         }
 
         try {
-            String prompt = buildQuizPrompt(ocrText);
+            String prompt = buildQuizPrompt(ocrText, questionCount);
 
             JSONObject requestJson = new JSONObject()
                     .put("contents", new JSONArray()
@@ -249,9 +249,11 @@ public class GeminiService {
                 + question;
     }
 
-    private String buildQuizPrompt(String ocrText) {
+    private String buildQuizPrompt(String ocrText, int questionCount) {
         return "Bạn là trợ lý học tập cho học sinh/sinh viên.\n"
-                + "Hãy tạo một bộ 5 câu hỏi trắc nghiệm từ nội dung OCR sau.\n"
+                + "Hãy tạo một bộ " + questionCount + " câu hỏi trắc nghiệm từ nội dung OCR sau.\n"
+                + "Số lượng câu hỏi đã được app chọn dựa trên độ dài và độ phức tạp của nội dung.\n"
+                + "Nếu nội dung quá ngắn, vẫn cố gắng tạo tối thiểu 3 câu hỏi có ý nghĩa.\n"
                 + "Mỗi câu phải có 4 đáp án (A, B, C, D) và chỉ có 1 đáp án đúng.\n"
                 + "\n"
                 + "Hãy trả về một JSON Array duy nhất, chứa các đối tượng có cấu trúc chính xác như sau:\n"

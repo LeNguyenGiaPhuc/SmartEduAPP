@@ -265,28 +265,28 @@ class StudyController {
 
 
     void requestGeminiQuiz(String ocrText, long documentId) {
+        int questionCount = estimateQuizQuestionCount(ocrText);
         setQuizLoading(true);
-        Toast.makeText(activity, "Đang tạo quiz bằng Gemini...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(activity, "Đang tạo " + questionCount + " câu quiz bằng Gemini...", Toast.LENGTH_SHORT).show();
 
         activity.geminiService.generateQuiz(
                 ocrText,
+                questionCount,
                 new GeminiService.GeminiCallback() {
                     @Override
                     public void onSuccess(String quizJson) {
-                        activity.runOnUiThread(() -> saveGeneratedQuestions(quizJson, documentId, ocrText));
+                        activity.runOnUiThread(() -> saveGeneratedQuestions(quizJson, documentId));
                     }
 
                     @Override
                     public void onError(Exception exception) {
                         activity.runOnUiThread(() -> {
+                            setQuizLoading(false);
                             Toast.makeText(
                                     activity,
-                                    "Gemini lỗi, đã dùng câu hỏi mẫu",
+                                    "Không tạo được quiz từ AI. Kiểm tra API key hoặc mạng rồi thử lại",
                                     Toast.LENGTH_SHORT
                             ).show();
-                            saveGeneratedQuestions(
-                                    activity.quizParser.buildFallbackQuestions(ocrText, documentId)
-                            );
                         });
                     }
                 }
@@ -298,11 +298,11 @@ class StudyController {
     if (activity.selectedDocument == null) {
         return;
     }
-    saveGeneratedQuestions(quizJson, activity.selectedDocument.id, activity.selectedDocument.ocrText);
+    saveGeneratedQuestions(quizJson, activity.selectedDocument.id);
     }
 
 
-    void saveGeneratedQuestions(String quizJson, long documentId, String fallbackText) {
+    void saveGeneratedQuestions(String quizJson, long documentId) {
     if (activity.selectedDocument == null) {
         return;
     }
@@ -310,15 +310,16 @@ class StudyController {
     try {
         List<StudyQuestion> questions = activity.quizParser.parse(quizJson, documentId);
         if (questions.isEmpty()) {
-            Toast.makeText(activity, "Gemini trả danh sách rỗng, đã dùng câu hỏi mẫu", Toast.LENGTH_SHORT).show();
-            questions = activity.quizParser.buildFallbackQuestions(fallbackText, documentId);
+            setQuizLoading(false);
+            Toast.makeText(activity, "Gemini chưa trả về câu hỏi hợp lệ. Vui lòng thử lại", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         saveGeneratedQuestions(questions, documentId);
     } catch (Exception exception) {
         android.util.Log.e("GeminiQuiz", "Raw quiz JSON: " + quizJson, exception);
-        Toast.makeText(activity, "Không thể đọc JSON Gemini, đã dùng câu hỏi mẫu", Toast.LENGTH_SHORT).show();
-        saveGeneratedQuestions(activity.quizParser.buildFallbackQuestions(fallbackText, documentId));
+        setQuizLoading(false);
+        Toast.makeText(activity, "Không thể đọc câu hỏi từ Gemini. Vui lòng tạo lại quiz", Toast.LENGTH_SHORT).show();
     }
     }
 
@@ -494,6 +495,16 @@ class StudyController {
             return;
         }
 
+        int firstMissingQuestion = findFirstUnansweredQuestion();
+        if (firstMissingQuestion > 0) {
+            Toast.makeText(
+                    activity,
+                    "Bạn chưa trả lời đủ câu hỏi. Vui lòng chọn đáp án cho câu " + firstMissingQuestion,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
         QuizAttempt attempt = activity.quizScoringService.score(
                 activity.selectedDocument.id,
                 activity.currentQuizQuestions,
@@ -618,6 +629,48 @@ class StudyController {
         }
 
         return summary.toString();
+    }
+
+
+    private int estimateQuizQuestionCount(String text) {
+        if (activity.isBlank(text)) {
+            return 3;
+        }
+
+        String cleanText = text.trim();
+        int wordCount = cleanText.split("\\s+").length;
+        int paragraphCount = cleanText.split("\\n\\s*\\n|\\n").length;
+        int sentenceCount = Math.max(1, cleanText.split("[.!?。！？]+").length);
+        int averageWordsPerSentence = Math.max(1, wordCount / sentenceCount);
+
+        int questionCount;
+        if (wordCount < 120) {
+            questionCount = 3;
+        } else if (wordCount < 300) {
+            questionCount = 5;
+        } else if (wordCount < 700) {
+            questionCount = 7;
+        } else {
+            questionCount = 10;
+        }
+
+        if (paragraphCount >= 6 || averageWordsPerSentence >= 22) {
+            questionCount++;
+        }
+
+        return Math.max(3, Math.min(10, questionCount));
+    }
+
+
+    private int findFirstUnansweredQuestion() {
+        for (int index = 0; index < activity.currentQuizQuestions.size(); index++) {
+            StudyQuestion question = activity.currentQuizQuestions.get(index);
+            String selectedAnswer = activity.selectedQuizAnswers.get(question.id);
+            if (activity.isBlank(selectedAnswer)) {
+                return index + 1;
+            }
+        }
+        return -1;
     }
 
 

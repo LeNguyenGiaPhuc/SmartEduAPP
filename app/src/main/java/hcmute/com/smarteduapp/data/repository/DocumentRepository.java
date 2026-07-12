@@ -9,22 +9,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import hcmute.com.smarteduapp.data.local.dao.StudyDocumentDao;
-import hcmute.com.smarteduapp.data.local.dao.StudyDocumentImageDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyDocumentAttachmentDao;
 import hcmute.com.smarteduapp.data.local.database.AppDatabase;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
-import hcmute.com.smarteduapp.data.local.entity.StudyDocumentImage;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 
 /** Owns all document-related database operations. */
 public class DocumentRepository {
     private final StudyDocumentDao documentDao;
-    private final StudyDocumentImageDao imageDao;
+    private final StudyDocumentAttachmentDao attachmentDao;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public DocumentRepository(Context context) {
         AppDatabase db = AppDatabase.getInstance(context);
         documentDao = db.studyDocumentDao();
-        imageDao = db.studyDocumentImageDao();
+        attachmentDao = db.studyDocumentAttachmentDao();
     }
 
     public void getBySubjectId(long subjectId, RepositoryCallback<List<StudyDocument>> callback) {
@@ -53,12 +53,12 @@ public class DocumentRepository {
         create(subjectId, title, null, callback);
     }
 
-    public void create(long subjectId, String title, String imageUri, RepositoryCallback<Long> callback) {
+    public void create(long subjectId, String title, String legacyAttachmentUri, RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {
                 long now = System.currentTimeMillis();
                 long id = documentDao.insert(
-                        new StudyDocument(subjectId, title, imageUri, "", now, now)
+                        new StudyDocument(subjectId, title, legacyAttachmentUri, "", now, now)
                 );
                 mainHandler.post(() -> callback.onSuccess(id));
             } catch (Exception exception) {
@@ -101,20 +101,20 @@ public class DocumentRepository {
         });
     }
 
-    public void addImage(long documentId, String imageUri, RepositoryCallback<Long> callback) {
+    public void addAttachment(long documentId, String attachmentUri, RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {
-                List<StudyDocumentImage> existing = imageDao.getByDocumentId(documentId);
-                for (StudyDocumentImage image : existing) {
-                    if (image.imageUri != null && image.imageUri.equals(imageUri)) {
-                        mainHandler.post(() -> callback.onSuccess(image.id));
+                List<StudyDocumentAttachment> existing = attachmentDao.getByDocumentId(documentId);
+                for (StudyDocumentAttachment attachment : existing) {
+                    if (attachment.attachmentUri != null && attachment.attachmentUri.equals(attachmentUri)) {
+                        mainHandler.post(() -> callback.onSuccess(attachment.id));
                         return;
                     }
                 }
-                StudyDocumentImage image = new StudyDocumentImage(
-                        documentId, imageUri, "", existing.size(), System.currentTimeMillis()
+                StudyDocumentAttachment attachment = new StudyDocumentAttachment(
+                        documentId, attachmentUri, "", existing.size(), System.currentTimeMillis()
                 );
-                long id = imageDao.insert(image);
+                long id = attachmentDao.insert(attachment);
                 mainHandler.post(() -> callback.onSuccess(id));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
@@ -122,21 +122,21 @@ public class DocumentRepository {
         });
     }
 
-    public void getImagesByDocumentId(long documentId, RepositoryCallback<List<StudyDocumentImage>> callback) {
+    public void getAttachmentsByDocumentId(long documentId, RepositoryCallback<List<StudyDocumentAttachment>> callback) {
         executor.execute(() -> {
             try {
-                List<StudyDocumentImage> images = imageDao.getByDocumentId(documentId);
-                mainHandler.post(() -> callback.onSuccess(images));
+                List<StudyDocumentAttachment> attachments = attachmentDao.getByDocumentId(documentId);
+                mainHandler.post(() -> callback.onSuccess(attachments));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
             }
         });
     }
 
-    public void updateImage(StudyDocumentImage image, RepositoryCallback<Integer> callback) {
+    public void updateAttachment(StudyDocumentAttachment attachment, RepositoryCallback<Integer> callback) {
         executor.execute(() -> {
             try {
-                int result = imageDao.update(image);
+                int result = attachmentDao.update(attachment);
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
@@ -144,10 +144,10 @@ public class DocumentRepository {
         });
     }
 
-    public void deleteImage(StudyDocumentImage image, RepositoryCallback<Integer> callback) {
+    public void deleteAttachment(StudyDocumentAttachment attachment, RepositoryCallback<Integer> callback) {
         executor.execute(() -> {
             try {
-                int result = imageDao.delete(image);
+                int result = attachmentDao.delete(attachment);
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));

@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Locale;
 
 import hcmute.com.smarteduapp.R;
-import hcmute.com.smarteduapp.data.local.entity.StudyDocumentImage;
+import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 
 /**
@@ -19,7 +19,7 @@ import hcmute.com.smarteduapp.ui.common.UiViewFactory;
  */
 public class DocumentAttachmentUi {
     public interface AttachmentCallbacks {
-        void onDeleteAttachment(StudyDocumentImage image);
+        void onDeleteAttachment(StudyDocumentAttachment attachment);
 
         void onStudyActionsEnabledChanged(boolean enabled);
     }
@@ -30,7 +30,7 @@ public class DocumentAttachmentUi {
         this.activity = activity;
     }
 
-    public void renderThumbnails(List<StudyDocumentImage> images, AttachmentCallbacks callbacks) {
+    public void renderThumbnails(List<StudyDocumentAttachment> attachments, AttachmentCallbacks callbacks) {
         LinearLayout container = activity.findViewById(R.id.imageThumbnailsContainer);
         if (container == null) {
             return;
@@ -44,16 +44,16 @@ public class DocumentAttachmentUi {
 
         ImageView preview = activity.findViewById(R.id.imageDocPreview);
         TextView placeholder = activity.findViewById(R.id.imageDocThumb);
-        if (images.isEmpty()) {
+        if (attachments.isEmpty()) {
             callbacks.onStudyActionsEnabledChanged(false);
             showDocumentImage(null, preview, placeholder);
             return;
         }
 
         callbacks.onStudyActionsEnabledChanged(true);
-        showDocumentImage(images.get(0).imageUri, preview, placeholder);
+        showDocumentImage(attachments.get(0).attachmentUri, preview, placeholder);
 
-        for (StudyDocumentImage image : images) {
+        for (StudyDocumentAttachment attachment : attachments) {
             ImageView thumb = new ImageView(activity);
             int size = UiViewFactory.dp(activity, 60);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
@@ -64,14 +64,14 @@ public class DocumentAttachmentUi {
             thumb.setClipToOutline(true);
 
             try {
-                thumb.setImageURI(Uri.parse(image.imageUri));
+                thumb.setImageURI(Uri.parse(attachment.attachmentUri));
             } catch (Exception e) {
                 thumb.setImageResource(android.R.drawable.ic_menu_report_image);
             }
 
-            thumb.setOnClickListener(v -> showDocumentImage(image.imageUri, preview, placeholder));
+            thumb.setOnClickListener(v -> showDocumentImage(attachment.attachmentUri, preview, placeholder));
             thumb.setOnLongClickListener(v -> {
-                callbacks.onDeleteAttachment(image);
+                callbacks.onDeleteAttachment(attachment);
                 return true;
             });
 
