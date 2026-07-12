@@ -24,7 +24,7 @@ import hcmute.com.smarteduapp.data.local.entity.Subject;
 @Database(
         entities = {Subject.class, StudyDocument.class, StudyDocumentAttachment.class, StudySummary.class,
                 StudyQuestion.class, QuizAttempt.class, QuizAttemptAnswer.class},
-        version = 3,
+        version = 4,
         exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
