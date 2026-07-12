@@ -185,12 +185,7 @@ class DocumentController {
         activity.documentFilePickerLauncher.launch(new String[]{
                 "application/pdf",
                 "text/plain",
-                "application/msword",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "application/vnd.ms-powerpoint",
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "image/*"
         });
     }
@@ -291,12 +286,7 @@ class DocumentController {
                 "image/*",
                 "application/pdf",
                 "text/plain",
-                "application/msword",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "application/vnd.ms-powerpoint",
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         }));
     }
 
@@ -659,6 +649,7 @@ class DocumentController {
             return;
         }
 
+        setOcrLoading(true);
         Toast.makeText(activity, "Đang quét nội dung tài liệu...", Toast.LENGTH_SHORT).show();
         activity.documentTextScannerService.scanAttachments(
                 activity,
@@ -671,13 +662,16 @@ class DocumentController {
 
                     @Override
                     public void onError(Exception exception) {
-                        activity.runOnUiThread(() -> Toast.makeText(
-                                activity,
-                                exception.getMessage() == null
-                                        ? "Không thể quét nội dung tài liệu"
-                                        : exception.getMessage(),
-                                Toast.LENGTH_SHORT
-                        ).show());
+                        activity.runOnUiThread(() -> {
+                            setOcrLoading(false);
+                            Toast.makeText(
+                                    activity,
+                                    exception.getMessage() == null
+                                            ? "Không thể quét nội dung tài liệu"
+                                            : exception.getMessage(),
+                                    Toast.LENGTH_SHORT
+                            ).show();
+                        });
                     }
                 }
         );
@@ -686,6 +680,7 @@ class DocumentController {
 
     void handleOcrResult(String recognizedText) {
         if (activity.isBlank(recognizedText)) {
+            setOcrLoading(false);
             Toast.makeText(activity, "Ảnh không có văn bản nhận dạng được", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -700,9 +695,19 @@ class DocumentController {
 
             @Override
             public void onError(Exception exception) {
+                setOcrLoading(false);
                 Toast.makeText(activity, "Quét được nội dung nhưng chưa lưu được", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+
+    private void setOcrLoading(boolean loading) {
+        TextView button = activity.findViewById(R.id.buttonRunOcr);
+        if (button != null) {
+            button.setText(loading ? "Đang quét..." : "Quét nội dung tài liệu");
+        }
+        setStudyActionsEnabled(!loading);
     }
 
 

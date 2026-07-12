@@ -1,4 +1,4 @@
 /**
- * Study business rules shared by summaries, question banks, quiz scoring and history.
+ * Study business rules shared by summaries, quiz scoring, quiz results and history.
  */
 package hcmute.com.smarteduapp.domain.usecase.study;

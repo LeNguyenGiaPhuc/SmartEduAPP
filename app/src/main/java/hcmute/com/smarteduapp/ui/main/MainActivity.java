@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         @Override
                         public void onError(Exception e) {
-                            Toast.makeText(MainActivity.this, "Lỗi thêm ảnh", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(MainActivity.this, "Lỗi thêm file tài liệu", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }

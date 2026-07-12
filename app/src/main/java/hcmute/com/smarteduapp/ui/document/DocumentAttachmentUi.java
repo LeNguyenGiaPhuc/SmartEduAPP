@@ -119,9 +119,7 @@ public class DocumentAttachmentUi {
         if (!isBlank(mimeType)) {
             if (mimeType.startsWith("image/")) return "Có ảnh tài liệu";
             if ("application/pdf".equals(mimeType)) return "Có file PDF";
-            if (mimeType.contains("wordprocessingml") || "application/msword".equals(mimeType)) return "Có file Word";
-            if (mimeType.contains("presentationml") || mimeType.contains("powerpoint")) return "Có file PowerPoint";
-            if (mimeType.contains("spreadsheetml") || mimeType.contains("excel")) return "Có file Excel";
+            if (mimeType.contains("wordprocessingml")) return "Có file DOCX";
             if (mimeType.startsWith("text/")) return "Có file văn bản";
         }
         return "Có file tài liệu";

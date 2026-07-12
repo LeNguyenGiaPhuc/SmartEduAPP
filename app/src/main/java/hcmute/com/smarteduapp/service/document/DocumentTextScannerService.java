@@ -6,6 +6,9 @@ import android.graphics.Color;
 import android.graphics.pdf.PdfRenderer;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.util.Xml;
+
+import org.xmlpull.v1.XmlPullParser;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -14,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import hcmute.com.smarteduapp.service.ocr.BatchOcrService;
 import hcmute.com.smarteduapp.service.ocr.MlKitOcrService;
@@ -21,7 +26,7 @@ import hcmute.com.smarteduapp.service.ocr.MlKitOcrService;
 /**
  * Scans the text content of a saved document attachment.
  * Supports images through ML Kit OCR, plain text files by reading directly,
- * and PDF by rendering pages to bitmaps before OCR.
+ * DOCX by extracting document text, and PDF by rendering pages to bitmaps before OCR.
  */
 public class DocumentTextScannerService {
     private final MlKitOcrService ocrService;
@@ -75,6 +80,16 @@ public class DocumentTextScannerService {
         if (isPlainText(primaryAttachmentUri, mimeType)) {
             try {
                 String text = readTextFile(context, Uri.parse(primaryAttachmentUri));
+                scanExtraImagesAndMerge(context, safeExtraImages, text, callback);
+            } catch (Exception exception) {
+                callback.onError(exception);
+            }
+            return;
+        }
+
+        if (isDocx(primaryAttachmentUri, mimeType)) {
+            try {
+                String text = readDocxFile(context, Uri.parse(primaryAttachmentUri));
                 scanExtraImagesAndMerge(context, safeExtraImages, text, callback);
             } catch (Exception exception) {
                 callback.onError(exception);
@@ -155,6 +170,15 @@ public class DocumentTextScannerService {
             return;
         }
 
+        if (isDocx(attachmentUri, mimeType)) {
+            try {
+                appendPageText(resultBuilder, readDocxFile(context, Uri.parse(attachmentUri)));
+            } catch (Exception ignored) {
+            }
+            scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+            return;
+        }
+
         if (isPdf(attachmentUri, mimeType)) {
             scanPdf(context, Uri.parse(attachmentUri), new ScanCallback() {
                 @Override
@@ -228,6 +252,38 @@ public class DocumentTextScannerService {
                     builder.append("\n");
                 }
                 builder.append(line);
+            }
+        }
+        return builder.toString().trim();
+    }
+
+
+    private String readDocxFile(Context context, Uri uri) throws Exception {
+        StringBuilder builder = new StringBuilder();
+        try (InputStream stream = context.getContentResolver().openInputStream(uri);
+             ZipInputStream zipStream = new ZipInputStream(stream)) {
+            ZipEntry entry;
+            while ((entry = zipStream.getNextEntry()) != null) {
+                if (!"word/document.xml".equals(entry.getName())) {
+                    zipStream.closeEntry();
+                    continue;
+                }
+
+                XmlPullParser parser = Xml.newPullParser();
+                parser.setInput(new InputStreamReader(zipStream, StandardCharsets.UTF_8));
+                int eventType = parser.getEventType();
+                while (eventType != XmlPullParser.END_DOCUMENT) {
+                    String tagName = parser.getName();
+                    if (eventType == XmlPullParser.START_TAG && "t".equals(tagName)) {
+                        builder.append(parser.nextText());
+                    } else if (eventType == XmlPullParser.END_TAG && "p".equals(tagName)) {
+                        if (builder.length() > 0 && builder.charAt(builder.length() - 1) != '\n') {
+                            builder.append('\n');
+                        }
+                    }
+                    eventType = parser.next();
+                }
+                break;
             }
         }
         return builder.toString().trim();
@@ -352,6 +408,14 @@ public class DocumentTextScannerService {
             return true;
         }
         return uriText != null && uriText.toLowerCase(Locale.US).endsWith(".pdf");
+    }
+
+
+    private boolean isDocx(String uriText, String mimeType) {
+        if ("application/vnd.openxmlformats-officedocument.wordprocessingml.document".equals(mimeType)) {
+            return true;
+        }
+        return uriText != null && uriText.toLowerCase(Locale.US).endsWith(".docx");
     }
 
     private boolean isBlank(String value) {

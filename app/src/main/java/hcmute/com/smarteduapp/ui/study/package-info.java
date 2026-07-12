@@ -1,4 +1,4 @@
 /**
- * Study presentation module: summary, question bank, quiz, result and history screens.
+ * Study presentation module: summary, quiz, result, history and AI chat screens.
  */
 package hcmute.com.smarteduapp.ui.study;

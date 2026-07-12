@@ -66,7 +66,7 @@
                     android:id="@+id/textResultHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Nội dung chi tiết"
+                    android:text="Tóm tắt ý chính"
                     android:textColor="@color/ink"
                     android:textSize="18sp"
                     android:textStyle="bold" />
@@ -77,43 +77,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:lineSpacingExtra="7dp"
-                    android:text="• Activity là một màn hình tương tác trong ứng dụng Android.\n• onCreate dùng để khởi tạo giao diện và dữ liệu.\n• onStart và onResume đưa Activity về trạng thái sẵn sàng.\n• onPause và onStop xảy ra khi Activity không còn ở phía trước."
+                    android:text="Chưa có nội dung AI. Hãy tạo tóm tắt từ tài liệu trước."
                     android:textColor="@color/ink"
-                    android:textSize="15sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="@color/paper"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/line_soft"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Mẹo ôn tập"
-                    android:textColor="@color/ink"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:lineSpacingExtra="5dp"
-                    android:text="Hãy nhớ: tạo Activity thì bắt đầu ở onCreate; rời màn hình thì hệ thống gọi onPause hoặc onStop."
-                    android:textColor="@color/ink_muted"
                     android:textSize="15sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

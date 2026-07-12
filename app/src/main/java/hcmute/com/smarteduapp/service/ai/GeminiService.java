@@ -164,73 +164,6 @@ public class GeminiService {
         }
     }
 
-    public void explain(String ocrText, GeminiCallback callback) {
-        if (BuildConfig.GEMINI_API_KEY.trim().isEmpty()) {
-            callback.onError(new IllegalStateException("Missing Gemini API key"));
-            return;
-        }
-
-        try {
-            String prompt = buildExplainPrompt(ocrText);
-
-            JSONObject requestJson = new JSONObject()
-                    .put("contents", new JSONArray()
-                            .put(new JSONObject()
-                                    .put("parts", new JSONArray()
-                                            .put(new JSONObject()
-                                                    .put("text", prompt)))));
-
-            String url = String.format(API_URL, BuildConfig.GEMINI_MODEL, BuildConfig.GEMINI_API_KEY);
-
-            RequestBody body = RequestBody.create(requestJson.toString(), JSON);
-
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(body)
-                    .build();
-
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException exception) {
-                    callback.onError(exception);
-                }
-
-                @Override
-                public void onResponse(Call call, Response response) {
-                    String responseText = "";
-
-                    try {
-                        ResponseBody responseBody = response.body();
-                        if (responseBody != null) {
-                            responseText = responseBody.string();
-                        }
-
-                        if (!response.isSuccessful()) {
-                            throw new IOException("Gemini API error: " + response.code() + " " + responseText);
-                        }
-
-                        JSONObject json = new JSONObject(responseText);
-                        String explanation = json
-                                .getJSONArray("candidates")
-                                .getJSONObject(0)
-                                .getJSONObject("content")
-                                .getJSONArray("parts")
-                                .getJSONObject(0)
-                                .getString("text");
-
-                        callback.onSuccess(explanation.trim());
-                    } catch (Exception exception) {
-                        callback.onError(exception);
-                    } finally {
-                        response.close();
-                    }
-                }
-            });
-        } catch (Exception exception) {
-            callback.onError(exception);
-        }
-    }
-
     public void askAboutDocument(String documentText, String question, GeminiCallback callback) {
         if (BuildConfig.GEMINI_API_KEY.trim().isEmpty()) {
             callback.onError(new IllegalStateException("Missing Gemini API key"));
@@ -302,15 +235,6 @@ public class GeminiService {
         return "Bạn là trợ lý học tập cho học sinh/sinh viên.\n"
                 + "Hãy tóm tắt nội dung OCR sau thành 3 đến 5 ý chính bằng tiếng Việt.\n"
                 + "Viết rõ ràng, ngắn gọn, dạng gạch đầu dòng.\n\n"
-                + "Nội dung OCR:\n"
-                + ocrText;
-    }
-
-    private String buildExplainPrompt(String ocrText) {
-        return "Bạn là một giáo viên tận tâm.\n"
-                + "Hãy giải thích nội dung OCR sau đây một cách dễ hiểu nhất cho học sinh.\n"
-                + "Sử dụng ngôn ngữ bình dị, ví dụ minh họa sinh động nếu có thể.\n"
-                + "Hãy chia nội dung thành các phần nhỏ có tiêu đề rõ ràng.\n\n"
                 + "Nội dung OCR:\n"
                 + ocrText;
     }

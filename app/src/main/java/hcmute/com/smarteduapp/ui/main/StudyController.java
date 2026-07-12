@@ -130,22 +130,15 @@ class StudyController {
 
                 if(summaries.isEmpty()){
                     activity.latestDisplayedSummary = null;
-                    summaryText.setText("Chưa có nội dung AI. Hãy tạo tóm tắt hoặc giải thích!");
+                    summaryText.setText("Chưa có tóm tắt AI. Hãy tạo tóm tắt từ tài liệu trước.");
                     return;
                 }
 
                 StudySummary latestSummary = summaries.get(0);
                 activity.latestDisplayedSummary = latestSummary;
                 summaryText.setText(latestSummary.content);
-                
-                // Heuristic to decide title
-                if (latestSummary.content.contains("•") || latestSummary.content.length() < 500) {
-                    summaryTitle.setText("Tóm tắt tài liệu");
-                    resultHeader.setText("Tóm tắt ý chính");
-                } else {
-                    summaryTitle.setText("Giải thích chuyên sâu");
-                    resultHeader.setText("Nội dung chi tiết");
-                }
+                summaryTitle.setText("Tóm tắt tài liệu");
+                resultHeader.setText("Tóm tắt ý chính");
             }
 
             @Override
@@ -185,6 +178,7 @@ class StudyController {
 
             @Override
             public void onError(Exception exception) {
+                setSummaryLoading(false);
                 Toast.makeText(activity, "Không thể lưu OCR trước khi tóm tắt", Toast.LENGTH_SHORT).show();
             }
         });
@@ -192,6 +186,7 @@ class StudyController {
 
 
     void requestGeminiSummary(String ocrText, long documentId) {
+        setSummaryLoading(true);
         Toast.makeText(activity, "Đang tóm tắt bằng Gemini...", Toast.LENGTH_SHORT).show();
 
         activity.geminiService.summarize(
@@ -262,6 +257,7 @@ class StudyController {
 
         @Override
         public void onError(Exception exception) {
+            setQuizLoading(false);
             Toast.makeText(activity, "Không thể lưu OCR trước khi tạo quiz", Toast.LENGTH_SHORT).show();
         }
     });
@@ -269,6 +265,7 @@ class StudyController {
 
 
     void requestGeminiQuiz(String ocrText, long documentId) {
+        setQuizLoading(true);
         Toast.makeText(activity, "Đang tạo quiz bằng Gemini...", Toast.LENGTH_SHORT).show();
 
         activity.geminiService.generateQuiz(
@@ -340,6 +337,7 @@ class StudyController {
         }
 
         if (questions.isEmpty()) {
+            setQuizLoading(false);
             Toast.makeText(activity, "Không tạo được câu hỏi", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -357,6 +355,7 @@ class StudyController {
 
                     @Override
                     public void onError(Exception exception) {
+                        setQuizLoading(false);
                         Toast.makeText(activity, "Không thể lưu câu hỏi", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -374,6 +373,7 @@ class StudyController {
 
     void saveGeneratedSummary(String summaryContent, long documentId) {
     if (activity.isBlank(summaryContent)) {
+        setSummaryLoading(false);
         Toast.makeText(activity, "Không tạo được nội dung tóm tắt", Toast.LENGTH_SHORT).show();
         return;
     }
@@ -389,6 +389,7 @@ class StudyController {
 
                 @Override
                 public void onError(Exception exception) {
+                    setSummaryLoading(false);
                     Toast.makeText(activity, "Không thể lưu tóm tắt", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -500,6 +501,7 @@ class StudyController {
         );
         List<QuizAttemptAnswer> answers = buildAttemptAnswers(attempt);
 
+        setSubmitLoading(true);
         activity.studyRepository.createQuizAttemptWithAnswers(
                 attempt,
                 answers,
@@ -513,6 +515,7 @@ class StudyController {
 
                     @Override
                     public void onError(Exception exception) {
+                        setSubmitLoading(false);
                         Toast.makeText(activity, "Không thể lưu kết quả quiz", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -615,6 +618,33 @@ class StudyController {
         }
 
         return summary.toString();
+    }
+
+
+    private void setSummaryLoading(boolean loading) {
+        setButtonLoading(R.id.buttonSummary, "Tóm tắt AI", "Đang tóm tắt...", loading);
+    }
+
+
+    private void setQuizLoading(boolean loading) {
+        setButtonLoading(R.id.buttonCreateQuiz, "Tạo quiz", "Đang tạo quiz...", loading);
+        setButtonLoading(R.id.buttonStartQuiz, "Tạo quiz", "Đang tạo quiz...", loading);
+    }
+
+
+    private void setSubmitLoading(boolean loading) {
+        setButtonLoading(R.id.buttonCheckAnswers, "Nộp bài và chấm điểm", "Đang lưu kết quả...", loading);
+    }
+
+
+    private void setButtonLoading(int viewId, String normalText, String loadingText, boolean loading) {
+        TextView button = activity.findViewById(viewId);
+        if (button == null) {
+            return;
+        }
+        button.setEnabled(!loading);
+        button.setText(loading ? loadingText : normalText);
+        button.animate().alpha(loading ? 0.65f : 1f).setDuration(160).start();
     }
 
 }
