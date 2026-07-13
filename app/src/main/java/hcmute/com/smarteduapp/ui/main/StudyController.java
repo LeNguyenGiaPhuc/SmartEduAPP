@@ -349,9 +349,10 @@ class StudyController {
                 new RepositoryCallback<Integer>() {
                     @Override
                     public void onSuccess(Integer result) {
+                        setQuizLoading(false);
                         activity.latestQuizAttempt = null;
                         activity.selectedQuizAnswers.clear();
-                        showQuestions();
+                        showFocusQuizModeDialog(true);
                     }
 
                     @Override
@@ -435,15 +436,36 @@ class StudyController {
 
 
     void showQuestions() {
-        showQuestions(true);
+        showFocusQuizModeDialog(true);
+    }
+
+
+    void showFocusQuizModeDialog(boolean reloadFromDatabase) {
+        new AlertDialog.Builder(activity)
+                .setTitle("Bật chế độ tập trung?")
+                .setMessage("Nếu bật, bạn không thể quay lại khi đang làm quiz. Nếu rời app trong lúc làm, kết quả vẫn được lưu nhưng đáp án đúng và giải thích sẽ bị khóa.")
+                .setNegativeButton("Làm bình thường", (dialog, which) -> {
+                    activity.startFocusQuizSession(false);
+                    openQuestions(reloadFromDatabase);
+                })
+                .setPositiveButton("Bật tập trung", (dialog, which) -> {
+                    activity.startFocusQuizSession(true);
+                    openQuestions(reloadFromDatabase);
+                })
+                .show();
     }
 
 
     void showQuestions(boolean reloadFromDatabase) {
+        openQuestions(reloadFromDatabase);
+    }
+
+
+    private void openQuestions(boolean reloadFromDatabase) {
         activity.currentScreen = R.layout.screen_questions;
         activity.setContentView(R.layout.screen_questions);
         activity.applySystemBars();
-        activity.bindClick(R.id.backProcessFromQuestions, activity::showProcessDocument);
+        activity.bindClick(R.id.backProcessFromQuestions, this::handleBackFromQuestions);
         activity.bindClick(R.id.buttonCheckAnswers, this::submitQuizAnswers);
         if (reloadFromDatabase || activity.currentQuizQuestions.isEmpty()) {
             loadQuizQuestionsFromDatabase();
@@ -454,6 +476,21 @@ class StudyController {
         title.setText("Quiz: " + activity.selectedDocument.title);
         activity.selectedQuizAnswers.clear();
         renderQuizQuestions(activity.currentQuizQuestions);
+    }
+
+
+    private void handleBackFromQuestions() {
+        if (activity.isFocusQuizInProgress()) {
+            Toast.makeText(
+                    activity,
+                    "Đang ở chế độ tập trung. Hãy nộp quiz trước khi thoát.",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        activity.resetFocusQuizSession();
+        activity.showProcessDocument();
     }
 
 
@@ -510,9 +547,14 @@ class StudyController {
                 activity.currentQuizQuestions,
                 activity.selectedQuizAnswers
         );
+        attempt.focusModeEnabled = activity.focusQuizModeEnabled;
+        attempt.focusExitCount = activity.focusQuizExitCount;
+        attempt.explanationUnlocked = activity.shouldUnlockQuizExplanation();
+
         List<QuizAttemptAnswer> answers = buildAttemptAnswers(attempt);
 
         setSubmitLoading(true);
+        activity.focusQuizSubmitting = true;
         activity.studyRepository.createQuizAttemptWithAnswers(
                 attempt,
                 answers,
@@ -521,12 +563,14 @@ class StudyController {
                     public void onSuccess(Long id) {
                         attempt.id = id;
                         activity.latestQuizAttempt = attempt;
+                        activity.stopFocusQuizTracking();
                         showQuizResult();
                     }
 
                     @Override
                     public void onError(Exception exception) {
                         setSubmitLoading(false);
+                        activity.focusQuizSubmitting = false;
                         Toast.makeText(activity, "Không thể lưu kết quả quiz", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -570,12 +614,13 @@ class StudyController {
         activity.applySystemBars();
         activity.bindClick(R.id.backQuizResult, this::goBackFromQuizResult);
         activity.bindClick(R.id.buttonViewHistory, activity::showHistory);
-        activity.bindClick(R.id.buttonRetryQuiz, () -> showQuestions(false));
+        activity.bindClick(R.id.buttonRetryQuiz, () -> showFocusQuizModeDialog(false));
         renderQuizResult();
     }
 
 
     void goBackFromQuizResult() {
+        activity.resetFocusQuizSession();
         if (activity.quizResultOpenedFromHome) {
             activity.quizResultOpenedFromHome = false;
             activity.showHome();

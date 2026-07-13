@@ -90,12 +90,17 @@ public class MainActivity extends AppCompatActivity {
     StudySummary latestDisplayedSummary;
     boolean documentOpenedFromHistory;
     boolean quizResultOpenedFromHome;
+    boolean focusQuizModeEnabled;
+    boolean focusQuizTrackingActive;
+    int focusQuizExitCount;
+    boolean focusQuizSubmitting;
     Uri selectedDocumentAttachmentUri;
     Uri pendingCameraAttachmentUri;
     ActivityResultLauncher<String[]> documentImagePickerLauncher;
     ActivityResultLauncher<String[]> documentFilePickerLauncher;
     ActivityResultLauncher<Uri> cameraCaptureLauncher;
     ActivityResultLauncher<String[]> addMoreAttachmentsPickerLauncher;
+    List<Uri> pendingDocumentAttachmentUris = new ArrayList<>();
     List<StudyDocumentAttachment> selectedDocumentAttachments = new ArrayList<>();
 
     @Override
@@ -124,6 +129,15 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
+                if (isFocusQuizInProgress()) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Đang ở chế độ tập trung. Hãy nộp quiz trước khi thoát.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                    return;
+                }
+
                 if (currentScreen == R.layout.activity_main) {
                     setEnabled(false);
                     getOnBackPressedDispatcher().onBackPressed();
@@ -133,6 +147,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         showHome();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (isFocusQuizInProgress() && !focusQuizSubmitting) {
+            focusQuizExitCount++;
+        }
     }
 
     private void registerImageLaunchers() {
@@ -181,8 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 new ActivityResultContracts.TakePicture(),
                 success -> {
                             if (Boolean.TRUE.equals(success) && pendingCameraAttachmentUri != null) {
-                                selectedDocumentAttachmentUri = pendingCameraAttachmentUri;
-                                updateSelectedImageLabel();
+                                handlePickedDocumentUri(pendingCameraAttachmentUri);
                         return;
                     }
                     pendingCameraAttachmentUri = null;
@@ -415,6 +436,35 @@ public class MainActivity extends AppCompatActivity {
         historyController.showHistory();
     }
 
+    void startFocusQuizSession(boolean enabled) {
+        focusQuizModeEnabled = enabled;
+        focusQuizTrackingActive = enabled;
+        focusQuizExitCount = 0;
+        focusQuizSubmitting = false;
+    }
+
+    void stopFocusQuizTracking() {
+        focusQuizTrackingActive = false;
+        focusQuizSubmitting = false;
+    }
+
+    void resetFocusQuizSession() {
+        focusQuizModeEnabled = false;
+        focusQuizTrackingActive = false;
+        focusQuizExitCount = 0;
+        focusQuizSubmitting = false;
+    }
+
+    boolean isFocusQuizInProgress() {
+        return focusQuizModeEnabled
+                && focusQuizTrackingActive
+                && currentScreen == R.layout.screen_questions;
+    }
+
+    boolean shouldUnlockQuizExplanation() {
+        return !focusQuizModeEnabled || focusQuizExitCount == 0;
+    }
+
     boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
@@ -430,11 +480,20 @@ public class MainActivity extends AppCompatActivity {
     void applySystemBars() {
         View root = findViewById(R.id.main);
         animateScreenEnter(root);
+        int initialLeft = root == null ? 0 : root.getPaddingLeft();
+        int initialTop = root == null ? 0 : root.getPaddingTop();
+        int initialRight = root == null ? 0 : root.getPaddingRight();
+        int initialBottom = root == null ? 0 : root.getPaddingBottom();
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             Insets systemBars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
             );
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            v.setPadding(
+                    initialLeft + systemBars.left,
+                    initialTop + systemBars.top,
+                    initialRight + systemBars.right,
+                    initialBottom + systemBars.bottom
+            );
             return insets;
         });
         ViewCompat.requestApplyInsets(root);

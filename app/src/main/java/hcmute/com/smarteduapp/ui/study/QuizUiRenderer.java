@@ -94,6 +94,11 @@ public class QuizUiRenderer {
         correctText.setText(latestQuizAttempt.correctCount + " / " + total + " câu trả lời đúng");
         detailText.setText((selectedDocument == null ? "Tài liệu" : selectedDocument.title)
                 + " · Sai " + latestQuizAttempt.wrongCount + " câu");
+        if (!latestQuizAttempt.explanationUnlocked) {
+            renderLockedQuizReview(latestQuizAttempt);
+            return;
+        }
+
         renderQuizAnswerReview(currentQuizQuestions, selectedQuizAnswers);
     }
 
@@ -210,6 +215,60 @@ public class QuizUiRenderer {
 
         container.setAdapter(adapter);
         adapter.submit(cards);
+    }
+
+    private void renderLockedQuizReview(QuizAttempt attempt) {
+        RecyclerView container = activity.findViewById(R.id.resultReviewContainer);
+        if (container == null) {
+            return;
+        }
+        UiViewFactory.setupVerticalRecycler(container);
+
+        SimpleCardAdapter adapter = new SimpleCardAdapter();
+        List<SimpleCardAdapter.CardFactory> cards = new ArrayList<>();
+        cards.add((parent, position) -> createLockedReviewCard(parent, attempt));
+
+        container.setAdapter(adapter);
+        adapter.submit(cards);
+    }
+
+    private View createLockedReviewCard(ViewGroup parent, QuizAttempt attempt) {
+        MaterialCardView card = UiViewFactory.createCard(parent.getContext());
+        card.setClickable(false);
+        card.setFocusable(false);
+
+        LinearLayout content = new LinearLayout(parent.getContext());
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(
+                UiViewFactory.dp(parent.getContext(), 16),
+                UiViewFactory.dp(parent.getContext(), 14),
+                UiViewFactory.dp(parent.getContext(), 16),
+                UiViewFactory.dp(parent.getContext(), 14)
+        );
+
+        TextView title = UiViewFactory.createText(
+                parent.getContext(),
+                "Lời giải đang bị khóa",
+                16,
+                R.color.danger,
+                true
+        );
+
+        TextView message = UiViewFactory.createText(
+                parent.getContext(),
+                "Bạn đã rời khỏi app " + attempt.focusExitCount
+                        + " lần trong chế độ tập trung. Hãy làm lại quiz nghiêm túc để xem đáp án đúng và giải thích.",
+                14,
+                R.color.ink_muted,
+                false
+        );
+        message.setPadding(0, UiViewFactory.dp(parent.getContext(), 8), 0, 0);
+
+        content.addView(title);
+        content.addView(message);
+        card.addView(content);
+        UiViewFactory.animateIn(card, 0);
+        return card;
     }
 
     private View createAnswerReviewCard(

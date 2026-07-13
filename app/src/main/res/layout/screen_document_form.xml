@@ -131,6 +131,52 @@
             android:text="Chưa chọn ảnh hoặc file tài liệu"
             android:textColor="@color/ink_muted" />
 
+        <LinearLayout
+            android:id="@+id/selectedAttachmentPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_field_outline"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/selectedAttachmentPreviewImage"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_document_thumb"
+                android:contentDescription="Preview tài liệu"
+                android:scaleType="centerCrop" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/selectedAttachmentPreviewTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tài liệu đã chọn"
+                    android:textColor="@color/ink"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/selectedAttachmentPreviewSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Có thể lưu tài liệu để dùng OCR/AI"
+                    android:textColor="@color/ink_muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <TextView
             android:id="@+id/buttonContinueOcr"
             android:layout_width="match_parent"

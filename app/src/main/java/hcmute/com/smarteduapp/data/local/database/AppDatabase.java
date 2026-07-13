@@ -3,8 +3,10 @@ package hcmute.com.smarteduapp.data.local.database;
 import android.content.Context;
 
 import androidx.room.Database;
+import androidx.room.migration.Migration;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import hcmute.com.smarteduapp.data.local.dao.QuizAttemptDao;
 import hcmute.com.smarteduapp.data.local.dao.QuizAttemptAnswerDao;
@@ -30,6 +32,15 @@ import hcmute.com.smarteduapp.data.local.entity.Subject;
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase instance;
 
+    private static final Migration MIGRATION_3_4 = new Migration(3, 4) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE quiz_attempts ADD COLUMN focusModeEnabled INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE quiz_attempts ADD COLUMN focusExitCount INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE quiz_attempts ADD COLUMN explanationUnlocked INTEGER NOT NULL DEFAULT 1");
+        }
+    };
+
     public abstract SubjectDao subjectDao();
     public abstract StudyDocumentDao studyDocumentDao();
     public abstract StudyDocumentAttachmentDao studyDocumentAttachmentDao();
@@ -47,7 +58,7 @@ public abstract class AppDatabase extends RoomDatabase {
                             AppDatabase.class,
                             "smartedu.db"
                     )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_3_4)
                     .build();
                 }
             }

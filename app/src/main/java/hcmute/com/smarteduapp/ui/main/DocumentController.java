@@ -1,8 +1,11 @@
 package hcmute.com.smarteduapp.ui.main;
 
 import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Environment;
+import android.provider.OpenableColumns;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -23,6 +26,7 @@ import hcmute.com.smarteduapp.data.local.entity.StudyDocument;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
 import hcmute.com.smarteduapp.service.document.DocumentTextScannerService;
+import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 import hcmute.com.smarteduapp.ui.document.DocumentAttachmentUi;
 
 /**
@@ -45,6 +49,9 @@ class DocumentController {
             // Some providers do not expose persistable permissions. The URI is still usable
             // during the current app session, while ACTION_OPEN_DOCUMENT providers persist.
         }
+        if (!activity.pendingDocumentAttachmentUris.contains(uri)) {
+            activity.pendingDocumentAttachmentUris.add(uri);
+        }
         activity.selectedDocumentAttachmentUri = uri;
         updateSelectedImageLabel();
     }
@@ -62,6 +69,7 @@ class DocumentController {
         }
         activity.selectedDocumentAttachmentUri = null;
         activity.pendingCameraAttachmentUri = null;
+        activity.pendingDocumentAttachmentUris.clear();
         boolean isEditing = documentId > 0;
         activity.currentScreen = R.layout.screen_document_form;
         activity.setContentView(R.layout.screen_document_form);
@@ -101,31 +109,19 @@ class DocumentController {
             titleInput.setError("Nhập tên tài liệu");
             return;
         }
-        String attachmentUri = activity.selectedDocumentAttachmentUri == null ? null : activity.selectedDocumentAttachmentUri.toString();
         if (documentId > 0) {
-            updateDocument(documentId, title, attachmentUri);
+            updateDocument(documentId, title);
             return;
         }
 
         activity.documentRepository.create(activity.selectedSubjectId, title, null, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
-                if (activity.isBlank(attachmentUri)) {
+                if (activity.pendingDocumentAttachmentUris.isEmpty()) {
                     activity.showSubjectDetail();
                     return;
                 }
-                activity.documentRepository.addAttachment(id, attachmentUri, new RepositoryCallback<Long>() {
-                    @Override
-                    public void onSuccess(Long attachmentId) {
-                        activity.showSubjectDetail();
-                    }
-
-                    @Override
-                    public void onError(Exception exception) {
-                        Toast.makeText(activity, "Đã lưu tài liệu nhưng chưa lưu được file", Toast.LENGTH_SHORT).show();
-                        activity.showSubjectDetail();
-                    }
-                });
+                savePendingAttachments(id, 0, activity::showSubjectDetail);
             }
 
             @Override
@@ -137,7 +133,31 @@ class DocumentController {
     }
 
 
-    void updateDocument(long documentId, String title, String attachmentUri) {
+    private void savePendingAttachments(long documentId, int index, Runnable onFinished) {
+        if (index >= activity.pendingDocumentAttachmentUris.size()) {
+            activity.pendingDocumentAttachmentUris.clear();
+            activity.selectedDocumentAttachmentUri = null;
+            onFinished.run();
+            return;
+        }
+
+        String attachmentUri = activity.pendingDocumentAttachmentUris.get(index).toString();
+        activity.documentRepository.addAttachment(documentId, attachmentUri, new RepositoryCallback<Long>() {
+            @Override
+            public void onSuccess(Long attachmentId) {
+                savePendingAttachments(documentId, index + 1, onFinished);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(activity, "Đã lưu tài liệu nhưng có file chưa lưu được", Toast.LENGTH_SHORT).show();
+                savePendingAttachments(documentId, index + 1, onFinished);
+            }
+        });
+    }
+
+
+    void updateDocument(long documentId, String title) {
         if (activity.selectedDocument == null || activity.selectedDocument.id != documentId) {
             Toast.makeText(activity, "Không tìm thấy tài liệu để cập nhật", Toast.LENGTH_SHORT).show();
             return;
@@ -148,23 +168,14 @@ class DocumentController {
         activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
-                if (activity.isBlank(attachmentUri)) {
+                if (activity.pendingDocumentAttachmentUris.isEmpty()) {
                     Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
                     showProcessDocument();
                     return;
                 }
-                activity.documentRepository.addAttachment(documentId, attachmentUri, new RepositoryCallback<Long>() {
-                    @Override
-                    public void onSuccess(Long attachmentId) {
-                        activity.selectedDocumentAttachmentUri = null;
-                        Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
-                        showProcessDocument();
-                    }
-
-                    @Override
-                    public void onError(Exception exception) {
-                        Toast.makeText(activity, "Không thể thêm file vào tài liệu", Toast.LENGTH_SHORT).show();
-                    }
+                savePendingAttachments(documentId, 0, () -> {
+                    Toast.makeText(activity, "Đã cập nhật tài liệu", Toast.LENGTH_SHORT).show();
+                    showProcessDocument();
                 });
             }
 
@@ -225,14 +236,204 @@ class DocumentController {
 
     void updateSelectedImageLabel() {
         TextView label = activity.findViewById(R.id.selectedImageLabel);
+        LinearLayout list = activity.findViewById(R.id.selectedAttachmentPreview);
         if (label == null) {
             return;
         }
-        if (activity.selectedDocumentAttachmentUri == null) {
+
+        if (list != null) {
+            list.removeAllViews();
+            list.setOrientation(LinearLayout.VERTICAL);
+        }
+
+        if (activity.pendingDocumentAttachmentUris.isEmpty()) {
+            label.setVisibility(View.VISIBLE);
+            if (list != null) {
+                list.setVisibility(View.GONE);
+            }
             label.setText("Chưa chọn ảnh hoặc file tài liệu");
             return;
         }
-        label.setText(getDocumentAttachmentLabel(activity.selectedDocumentAttachmentUri.toString()));
+
+        if (list == null) {
+            label.setVisibility(View.VISIBLE);
+            label.setText("Đã chọn " + activity.pendingDocumentAttachmentUris.size() + " file/ảnh");
+            return;
+        }
+
+        label.setVisibility(View.GONE);
+        list.setVisibility(View.VISIBLE);
+
+        TextView hint = new TextView(activity);
+        hint.setText("Đã chọn " + activity.pendingDocumentAttachmentUris.size()
+                + " file/ảnh · Bấm giữ một file để xóa");
+        hint.setTextColor(activity.getColor(R.color.ink_muted));
+        hint.setTextSize(13);
+        list.addView(hint);
+
+        for (int index = 0; index < activity.pendingDocumentAttachmentUris.size(); index++) {
+            Uri uri = activity.pendingDocumentAttachmentUris.get(index);
+            View row = createPendingAttachmentRow(uri, index);
+            list.addView(row);
+        }
+    }
+
+
+    private View createPendingAttachmentRow(Uri uri, int index) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(
+                UiViewFactory.dp(activity, 8),
+                UiViewFactory.dp(activity, 8),
+                UiViewFactory.dp(activity, 8),
+                UiViewFactory.dp(activity, 8)
+        );
+
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rowParams.topMargin = UiViewFactory.dp(activity, 8);
+        row.setLayoutParams(rowParams);
+
+        ImageView thumb = new ImageView(activity);
+        int imageSize = UiViewFactory.dp(activity, 52);
+        LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(imageSize, imageSize);
+        thumb.setLayoutParams(imageParams);
+        thumb.setBackgroundResource(R.drawable.bg_document_thumb);
+        thumb.setPadding(UiViewFactory.dp(activity, 8), UiViewFactory.dp(activity, 8),
+                UiViewFactory.dp(activity, 8), UiViewFactory.dp(activity, 8));
+
+        String attachmentUri = uri.toString();
+        if (isImageAttachment(attachmentUri)) {
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setPadding(0, 0, 0, 0);
+            thumb.setImageURI(uri);
+        } else {
+            thumb.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            thumb.setImageResource(android.R.drawable.ic_menu_upload);
+        }
+
+        LinearLayout textBox = new LinearLayout(activity);
+        textBox.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+        );
+        textParams.setMargins(UiViewFactory.dp(activity, 12), 0, 0, 0);
+        textBox.setLayoutParams(textParams);
+
+        TextView title = new TextView(activity);
+        title.setText(getAttachmentDisplayName(uri));
+        title.setTextColor(activity.getColor(R.color.ink));
+        title.setTextSize(14);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setSingleLine(true);
+
+        TextView subtitle = new TextView(activity);
+        subtitle.setText(getDocumentAttachmentLabel(attachmentUri));
+        subtitle.setTextColor(activity.getColor(R.color.ink_muted));
+        subtitle.setTextSize(12);
+
+        textBox.addView(title);
+        textBox.addView(subtitle);
+        row.addView(thumb);
+        row.addView(textBox);
+
+        row.setOnLongClickListener(v -> {
+            confirmRemovePendingAttachment(index);
+            return true;
+        });
+        UiViewFactory.applyPressEffect(row);
+        return row;
+    }
+
+
+    private void confirmRemovePendingAttachment(int index) {
+        if (index < 0 || index >= activity.pendingDocumentAttachmentUris.size()) {
+            return;
+        }
+
+        new AlertDialog.Builder(activity)
+                .setTitle("Xóa khỏi danh sách chọn")
+                .setMessage("Bạn có muốn bỏ file/ảnh này khỏi tài liệu đang chọn không?")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> removePendingAttachment(index))
+                .show();
+    }
+
+
+    private void removePendingAttachment(int index) {
+        if (index < 0 || index >= activity.pendingDocumentAttachmentUris.size()) {
+            return;
+        }
+
+        activity.pendingDocumentAttachmentUris.remove(index);
+        if (activity.pendingDocumentAttachmentUris.isEmpty()) {
+            activity.selectedDocumentAttachmentUri = null;
+        } else {
+            activity.selectedDocumentAttachmentUri = activity.pendingDocumentAttachmentUris
+                    .get(activity.pendingDocumentAttachmentUris.size() - 1);
+        }
+        updateSelectedImageLabel();
+    }
+
+
+    private boolean isImageAttachment(String attachmentUri) {
+        if (activity.isBlank(attachmentUri)) {
+            return false;
+        }
+
+        String mimeType = activity.getContentResolver().getType(Uri.parse(attachmentUri));
+        if (mimeType != null) {
+            return mimeType.startsWith("image/");
+        }
+
+        String lower = attachmentUri.toLowerCase();
+        return lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".png")
+                || lower.endsWith(".webp");
+    }
+
+
+    private String getAttachmentDisplayName(Uri uri) {
+        try (Cursor cursor = activity.getContentResolver().query(
+                uri,
+                new String[]{OpenableColumns.DISPLAY_NAME},
+                null,
+                null,
+                null
+        )) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (nameIndex >= 0) {
+                    String name = cursor.getString(nameIndex);
+                    if (!activity.isBlank(name)) {
+                        return name;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Camera/FileProvider URI có thể không trả về display name.
+        }
+        return "Sẵn sàng lưu vào tài liệu";
+    }
+
+
+    private String getSelectedAttachmentSummary() {
+        if (activity.pendingDocumentAttachmentUris.isEmpty()) {
+            return "";
+        }
+
+        String firstName = getAttachmentDisplayName(activity.pendingDocumentAttachmentUris.get(0));
+        int remaining = activity.pendingDocumentAttachmentUris.size() - 1;
+        if (remaining <= 0) {
+            return firstName;
+        }
+        return firstName + " và " + remaining + " file khác";
     }
 
 
