@@ -23,14 +23,12 @@ public class StudyDocumentAttachment {
     public long document_id;
     @ColumnInfo(name = "imageUri")
     public String attachmentUri;
-    public String ocrText;
     public int orderIndex;
     public long createdAt;
 
-    public StudyDocumentAttachment(long document_id, String attachmentUri, String ocrText, int orderIndex, long createdAt) {
+    public StudyDocumentAttachment(long document_id, String attachmentUri, int orderIndex, long createdAt) {
         this.document_id = document_id;
         this.attachmentUri = attachmentUri;
-        this.ocrText = ocrText;
         this.orderIndex = orderIndex;
         this.createdAt = createdAt;
     }

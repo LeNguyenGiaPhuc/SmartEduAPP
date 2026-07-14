@@ -45,7 +45,8 @@ class HistoryController {
         Subject subject;
         int summaryCount;
         int attemptCount;
-        QuizAttempt latestAttempt;
+        QuizAttempt attempt;
+        boolean showSummaryAction;
     }
 
     void showHistory() {
@@ -133,33 +134,55 @@ class HistoryController {
             subjectById.put(subject.id, subject);
         }
 
-        Map<Long, LearningHistoryItem> itemByDocumentId = new LinkedHashMap<>();
+        Map<Long, LearningHistoryItem> documentItemById = new LinkedHashMap<>();
         for (StudyDocument document : documents) {
             LearningHistoryItem item = new LearningHistoryItem();
             item.document = document;
             item.subject = subjectById.get(document.subject_id);
-            itemByDocumentId.put(document.id, item);
+            documentItemById.put(document.id, item);
         }
 
         for (StudySummary summary : summaries) {
-            LearningHistoryItem item = itemByDocumentId.get(summary.document_id);
+            LearningHistoryItem item = documentItemById.get(summary.document_id);
             if (item != null) {
                 item.summaryCount++;
             }
         }
 
+        Map<Long, Integer> attemptCountByDocumentId = new HashMap<>();
         for (QuizAttempt attempt : attempts) {
-            LearningHistoryItem item = itemByDocumentId.get(attempt.document_id);
-            if (item != null) {
-                item.attemptCount++;
-                if (item.latestAttempt == null || attempt.completedAt > item.latestAttempt.completedAt) {
-                    item.latestAttempt = attempt;
-                }
+            if (documentItemById.containsKey(attempt.document_id)) {
+                Integer count = attemptCountByDocumentId.get(attempt.document_id);
+                attemptCountByDocumentId.put(attempt.document_id, count == null ? 1 : count + 1);
             }
         }
 
-        for (LearningHistoryItem item : itemByDocumentId.values()) {
-            cards.add((parent, position) -> createLearningHistoryCard(item, position));
+        for (LearningHistoryItem documentItem : documentItemById.values()) {
+            int attemptCount = attemptCountByDocumentId.getOrDefault(documentItem.document.id, 0);
+            if (attemptCount == 0) {
+                // A document without quiz attempts still needs its summary action.
+                documentItem.showSummaryAction = true;
+                cards.add((parent, position) -> createLearningHistoryCard(documentItem, position));
+            }
+        }
+
+        Map<Long, Integer> summaryActionCountByDocumentId = new HashMap<>();
+        for (QuizAttempt attempt : attempts) {
+            LearningHistoryItem documentItem = documentItemById.get(attempt.document_id);
+            if (documentItem == null) {
+                continue;
+            }
+
+            LearningHistoryItem attemptItem = new LearningHistoryItem();
+            attemptItem.document = documentItem.document;
+            attemptItem.subject = documentItem.subject;
+            attemptItem.summaryCount = documentItem.summaryCount;
+            attemptItem.attemptCount = attemptCountByDocumentId.getOrDefault(attempt.document_id, 0);
+            attemptItem.attempt = attempt;
+            int summaryCount = summaryActionCountByDocumentId.getOrDefault(attempt.document_id, 0);
+            attemptItem.showSummaryAction = summaryCount == 0;
+            summaryActionCountByDocumentId.put(attempt.document_id, summaryCount + 1);
+            cards.add((parent, position) -> createLearningHistoryCard(attemptItem, position));
         }
 
         adapter.submit(cards);
@@ -182,7 +205,13 @@ class HistoryController {
     private MaterialCardView createLearningHistoryCard(LearningHistoryItem item, int index) {
         SimpleDateFormat format = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
         MaterialCardView card = UiViewFactory.createCard(activity);
-        card.setOnClickListener(v -> openHistoryDocument(item));
+        card.setOnClickListener(v -> {
+            if (item.attempt != null) {
+                openQuizAttemptResult(item);
+            } else {
+                openHistoryDocument(item);
+            }
+        });
 
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -212,14 +241,14 @@ class HistoryController {
         content.addView(subject);
         content.addView(studyState);
 
-        if (item.latestAttempt != null) {
-            int total = item.latestAttempt.correctCount + item.latestAttempt.wrongCount;
+        if (item.attempt != null) {
+            int total = item.attempt.correctCount + item.attempt.wrongCount;
             TextView quiz = UiViewFactory.createText(
                     activity,
-                    "Quiz gần nhất: " + item.latestAttempt.correctCount + "/" + total
-                            + " đúng · " + String.format(Locale.US, "%.1f", item.latestAttempt.score)
-                            + " điểm · " + item.attemptCount + " lần làm · "
-                            + format.format(new Date(item.latestAttempt.completedAt)),
+                    "Lần làm quiz: " + item.attempt.correctCount + "/" + total
+                            + " đúng · " + String.format(Locale.US, "%.1f", item.attempt.score)
+                            + " điểm · Lần " + item.attemptCount + " · "
+                            + format.format(new Date(item.attempt.completedAt)),
                     13,
                     R.color.brand_blue_dark,
                     true
@@ -233,11 +262,11 @@ class HistoryController {
         }
 
         LinearLayout primaryActions = createActionRow();
-        if (item.summaryCount > 0) {
+        if (item.showSummaryAction && item.summaryCount > 0) {
             addHistoryAction(primaryActions, "Tóm tắt", R.color.brand_blue_dark, R.drawable.bg_action_chip_blue,
                     () -> openHistorySummary(item));
         }
-        if (item.latestAttempt != null) {
+        if (item.attempt != null) {
             addHistoryAction(primaryActions, "Xem quiz", R.color.brand_blue_dark, R.drawable.bg_action_chip_blue,
                     () -> openQuizAttemptResult(item));
         }
@@ -246,7 +275,7 @@ class HistoryController {
         }
 
         LinearLayout dangerActions = createActionRow();
-        if (item.attemptCount > 0) {
+        if (item.attempt != null) {
             addHistoryAction(dangerActions, "Xóa lần quiz", R.color.danger, R.drawable.bg_action_chip_danger,
                     () -> confirmDeleteQuizHistory(item));
         }
@@ -300,7 +329,7 @@ class HistoryController {
     }
 
     private void openQuizAttemptResult(LearningHistoryItem item) {
-        openQuizAttemptResult(item.document, item.subject, item.latestAttempt, false);
+        openQuizAttemptResult(item.document, item.subject, item.attempt, false);
     }
 
     void openQuizAttemptResult(StudyDocument document, QuizAttempt attempt, boolean openedFromHome) {
@@ -383,13 +412,13 @@ class HistoryController {
     }
 
     private void deleteQuizHistory(LearningHistoryItem item) {
-        if (item.latestAttempt == null) {
+        if (item.attempt == null) {
             Toast.makeText(activity, "Không có lần làm quiz để xóa", Toast.LENGTH_SHORT).show();
             return;
         }
 
         activity.studyRepository.deleteQuizAttempt(
-                item.latestAttempt,
+                item.attempt,
                 new RepositoryCallback<Integer>() {
                     @Override
                     public void onSuccess(Integer result) {

@@ -50,15 +50,11 @@ public class DocumentRepository {
     }
 
     public void create(long subjectId, String title, RepositoryCallback<Long> callback) {
-        create(subjectId, title, null, callback);
-    }
-
-    public void create(long subjectId, String title, String legacyAttachmentUri, RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {
                 long now = System.currentTimeMillis();
                 long id = documentDao.insert(
-                        new StudyDocument(subjectId, title, legacyAttachmentUri, "", now, now)
+                        new StudyDocument(subjectId, title, null, "", now, now)
                 );
                 mainHandler.post(() -> callback.onSuccess(id));
             } catch (Exception exception) {
@@ -112,7 +108,7 @@ public class DocumentRepository {
                     }
                 }
                 StudyDocumentAttachment attachment = new StudyDocumentAttachment(
-                        documentId, attachmentUri, "", existing.size(), System.currentTimeMillis()
+                        documentId, attachmentUri, existing.size(), System.currentTimeMillis()
                 );
                 long id = attachmentDao.insert(attachment);
                 mainHandler.post(() -> callback.onSuccess(id));
@@ -127,17 +123,6 @@ public class DocumentRepository {
             try {
                 List<StudyDocumentAttachment> attachments = attachmentDao.getByDocumentId(documentId);
                 mainHandler.post(() -> callback.onSuccess(attachments));
-            } catch (Exception exception) {
-                mainHandler.post(() -> callback.onError(exception));
-            }
-        });
-    }
-
-    public void updateAttachment(StudyDocumentAttachment attachment, RepositoryCallback<Integer> callback) {
-        executor.execute(() -> {
-            try {
-                int result = attachmentDao.update(attachment);
-                mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
             }

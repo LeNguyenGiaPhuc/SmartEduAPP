@@ -1,0 +1,155 @@
+
+SmartEdu AI – Ứng dụng quản lý tài liệu học tập và tạo bộ ôn tập thông minh
+
+Nhóm 09:
+Huỳnh Lê Văn           -  23110071
+Phạm Thanh Phong   -  23110054
+Lê Nguyễn Gia Phúc -  23110056
+
+1. Lý do chọn đề tài
+Trong quá trình học tập, sinh viên thường phải tiếp cận nhiều loại tài liệu khác nhau như slide bài giảng, sách, ghi chú viết tay hoặc tài liệu được chụp lại dưới dạng hình ảnh. Tuy nhiên, việc quản lý các tài liệu này thường còn rời rạc, khó tìm kiếm lại và khó hệ thống hóa theo từng môn học. Người học thường phải tự đọc lại toàn bộ tài liệu, tự ghi chú, tự tóm tắt và tự chuẩn bị câu hỏi ôn tập, gây mất nhiều thời gian.
+Hiện nay, các công cụ AI như ChatGPT hoặc Gemini có thể hỗ trợ tóm tắt, giải thích hoặc tạo câu hỏi. Tuy nhiên, các công cụ này chưa phải là một hệ thống quản lý tài liệu học tập hoàn chỉnh. Người học vẫn phải tự lưu trữ tài liệu, tự quản lý nội dung đã học, tự lưu câu hỏi, tự theo dõi điểm số và lịch sử ôn tập.
+Vì vậy, nhóm chọn đề tài SmartEdu AI – Ứng dụng quản lý tài liệu học tập và tạo bộ ôn tập thông minh nhằm xây dựng một ứng dụng Android hỗ trợ sinh viên quản lý môn học, quản lý tài liệu học tập, lưu nội dung OCR, tạo bộ câu hỏi ôn tập, làm quiz và lưu kết quả học tập. Trong hệ thống này, AI chỉ đóng vai trò là module hỗ trợ tạo tóm tắt và câu hỏi từ nội dung tài liệu, còn trọng tâm chính của ứng dụng là quản lý dữ liệu học tập bằng SQLite và cung cấp các chức năng CRUD rõ ràng.
+Đề tài có tính ứng dụng thực tế, phù hợp với nhu cầu học tập của sinh viên và giúp nhóm vận dụng kiến thức về lập trình Android, xử lý ảnh, OCR, cơ sở dữ liệu SQLite, CRUD và tích hợp API vào một sản phẩm hoàn chỉnh.
+2. Vấn đề cần giải quyết
+Hiện nay, nhiều sinh viên lưu tài liệu học tập dưới dạng ảnh chụp, slide hoặc ghi chú nhưng chưa có công cụ phù hợp để quản lý và khai thác lại các tài liệu này một cách có hệ thống. Tài liệu thường bị lưu rời rạc trong thư viện ảnh hoặc nhiều ứng dụng khác nhau, gây khó khăn khi cần tìm kiếm, xem lại hoặc ôn tập.
+Ngoài ra, việc sử dụng trực tiếp các công cụ AI chỉ hỗ trợ xử lý nội dung tại thời điểm hỏi, nhưng chưa giải quyết tốt các nhu cầu như quản lý tài liệu theo môn học, lưu nội dung OCR, lưu tóm tắt, lưu bộ câu hỏi, làm bài quiz trực tiếp, chấm điểm và xem lại lịch sử học tập.
+Đề tài cần giải quyết các vấn đề sau:
+Quản lý danh sách môn học của người dùng.
+Quản lý tài liệu học tập theo từng môn học.
+Chuyển nội dung trong ảnh tài liệu thành văn bản bằng OCR.
+Lưu ảnh tài liệu, nội dung OCR, tóm tắt và câu hỏi vào cơ sở dữ liệu.
+Hỗ trợ tạo tóm tắt và câu hỏi ôn tập từ nội dung tài liệu bằng AI.
+Cho phép người dùng làm bài quiz trực tiếp trên ứng dụng.
+Tự động chấm điểm và lưu kết quả học tập.
+Cho phép người dùng xem lại lịch sử tài liệu, câu hỏi và điểm số đã làm.
+3. Đối tượng sử dụng
+Ứng dụng hướng đến đối tượng chính là sinh viên, đặc biệt là những người thường xuyên học bằng slide, ảnh chụp tài liệu, sách, ghi chú hoặc tài liệu học tập dạng hình ảnh. Ứng dụng phù hợp với sinh viên cần một công cụ để quản lý tài liệu theo môn học, tạo nội dung ôn tập nhanh và theo dõi kết quả học tập cá nhân.
+Ngoài ra, ứng dụng cũng có thể phù hợp với học sinh hoặc người tự học cần quản lý tài liệu, tóm tắt kiến thức, tạo câu hỏi ôn tập và luyện tập lại các nội dung đã học.
+4. Mục tiêu chi tiết
+Mục tiêu của đề tài là xây dựng một ứng dụng Android có khả năng quản lý tài liệu học tập và hỗ trợ tạo bộ ôn tập thông minh bằng cách kết hợp OCR, AI và cơ sở dữ liệu cục bộ.
+Các mục tiêu cụ thể gồm:
+Xây dựng giao diện Android đơn giản, dễ sử dụng.
+Cho phép người dùng thêm, xem, sửa và xóa môn học.
+Cho phép người dùng chụp ảnh hoặc chọn ảnh tài liệu từ thư viện.
+Cho phép người dùng lưu tài liệu học tập theo từng môn học.
+Sử dụng Google ML Kit để trích xuất văn bản từ ảnh tài liệu.
+Cho phép người dùng xem và chỉnh sửa nội dung OCR trước khi lưu.
+Gửi nội dung văn bản đến AI để tạo tóm tắt và câu hỏi ôn tập.
+Lưu tóm tắt, câu hỏi và đáp án vào cơ sở dữ liệu SQLite.
+Xây dựng chức năng làm quiz trực tiếp trên ứng dụng.
+Tự động chấm điểm và lưu kết quả làm bài.
+Cho phép người dùng xem lại lịch sử tài liệu, câu hỏi và kết quả học tập.
+Xây dựng cơ sở dữ liệu cụ thể để quản lý môn học, tài liệu, tóm tắt, câu hỏi và kết quả quiz.
+5. Phạm vi đề tài
+Trong phạm vi đồ án, nhóm tập trung xây dựng phiên bản MVP của ứng dụng SmartEdu AI trên nền tảng Android. Ứng dụng sẽ tập trung vào việc quản lý tài liệu học tập, xử lý ảnh tài liệu bằng OCR, tạo nội dung ôn tập bằng AI và lưu dữ liệu học tập bằng SQLite.
+Phạm vi thực hiện bao gồm:
+Quản lý môn học bằng các chức năng thêm, xem, sửa, xóa.
+Quản lý tài liệu học tập theo từng môn học.
+Chụp ảnh tài liệu bằng camera.
+Chọn ảnh tài liệu từ thư viện.
+Nhận dạng văn bản từ ảnh bằng Google ML Kit.
+Lưu ảnh tài liệu và nội dung OCR vào SQLite.
+Tạo tóm tắt nội dung bằng AI.
+Tạo câu hỏi trắc nghiệm ôn tập bằng AI.
+Lưu câu hỏi, đáp án đúng và giải thích vào SQLite.
+Cho phép người dùng làm quiz trực tiếp trong ứng dụng.
+Tự động chấm điểm sau khi làm quiz.
+Lưu kết quả làm bài gồm điểm số, số câu đúng và số câu sai.
+Xem lại lịch sử tài liệu và kết quả học tập.
+6. Yêu cầu chức năng
+6.1. Chức năng quản lý môn học
+Người dùng có thể quản lý danh sách môn học trong ứng dụng. Mỗi môn học sẽ được dùng để phân loại các tài liệu học tập tương ứng.
+Các chức năng bao gồm:
+Thêm môn học mới.
+Xem danh sách môn học.
+Cập nhật tên môn học hoặc mô tả môn học.
+Xóa môn học khi không còn sử dụng.
+Xem danh sách tài liệu thuộc từng môn học.
+6.2. Chức năng quản lý tài liệu học tập
+Người dùng có thể thêm tài liệu học tập bằng cách chụp ảnh trực tiếp hoặc chọn ảnh có sẵn từ thư viện điện thoại. Mỗi tài liệu sẽ được gán vào một môn học cụ thể.
+Các chức năng bao gồm:
+Thêm tài liệu mới.
+Chọn môn học cho tài liệu.
+Đặt tên tài liệu.
+Lưu đường dẫn ảnh tài liệu.
+Xem danh sách tài liệu đã lưu.
+Xem chi tiết tài liệu.
+Sửa tên tài liệu hoặc nội dung OCR.
+Xóa tài liệu khỏi hệ thống.
+6.3. Chức năng nhận dạng văn bản OCR
+Ứng dụng sử dụng Google ML Kit để nhận dạng chữ trong ảnh tài liệu. Kết quả sau khi xử lý là văn bản thuần, có thể hiển thị cho người dùng kiểm tra trước khi lưu vào cơ sở dữ liệu hoặc gửi sang AI.
+Các chức năng bao gồm:
+Nhận dạng văn bản từ ảnh chụp hoặc ảnh được chọn.
+Hiển thị nội dung OCR cho người dùng kiểm tra.
+Cho phép chỉnh sửa nội dung OCR nếu kết quả nhận dạng chưa chính xác.
+Lưu nội dung OCR vào SQLite.
+6.4. Chức năng tóm tắt nội dung bằng AI
+Sau khi có nội dung OCR, người dùng có thể yêu cầu ứng dụng tạo bản tóm tắt. AI sẽ phân tích nội dung và trả về các ý chính ngắn gọn, giúp người dùng ôn tập nhanh hơn.
+Các chức năng bao gồm:
+Tạo tóm tắt từ nội dung OCR.
+Hiển thị bản tóm tắt cho người dùng.
+Lưu bản tóm tắt vào SQLite.
+Cho phép người dùng xem lại hoặc xóa bản tóm tắt.
+6.5. Chức năng quản lý câu hỏi ôn tập
+Ứng dụng có thể tự động tạo câu hỏi trắc nghiệm dựa trên nội dung tài liệu. Mỗi câu hỏi gồm nội dung câu hỏi, các đáp án lựa chọn, đáp án đúng và phần giải thích.
+Các chức năng bao gồm:
+Tạo bộ câu hỏi từ nội dung OCR.
+Tạo từ 5 đến 10 câu hỏi trắc nghiệm cho mỗi tài liệu.
+Lưu câu hỏi, đáp án và giải thích vào SQLite.
+Hiển thị danh sách câu hỏi theo từng tài liệu.
+Cho phép sửa hoặc xóa câu hỏi nếu cần.
+6.6. Chức năng làm quiz và chấm điểm
+Người dùng có thể làm bài quiz trực tiếp trên ứng dụng dựa trên bộ câu hỏi đã tạo. Sau khi hoàn thành, ứng dụng sẽ tự động chấm điểm và hiển thị kết quả.
+Các chức năng bao gồm:
+Hiển thị từng câu hỏi trắc nghiệm.
+Cho phép người dùng chọn đáp án.
+Kiểm tra đáp án đúng/sai.
+Tính số câu đúng, số câu sai và điểm số.
+Hiển thị đáp án đúng và giải thích sau khi làm bài.
+Lưu kết quả làm bài vào SQLite.
+6.7. Chức năng lưu và xem lịch sử học tập
+Ứng dụng lưu lại quá trình học tập của người dùng, bao gồm tài liệu đã xử lý, nội dung OCR, tóm tắt, câu hỏi và kết quả quiz.
+Các chức năng bao gồm:
+Xem lịch sử tài liệu đã thêm.
+Xem lại nội dung OCR của tài liệu.
+Xem lại bản tóm tắt đã tạo.
+Xem lại danh sách câu hỏi theo tài liệu.
+Xem lại kết quả quiz đã làm.
+Xóa dữ liệu lịch sử khi không còn cần thiết.
+7. Yêu cầu phi chức năng
+Ứng dụng cần đáp ứng các yêu cầu phi chức năng sau:
+Giao diện đơn giản, dễ sử dụng đối với sinh viên.
+Các chức năng CRUD phải hoạt động ổn định.
+Dữ liệu môn học, tài liệu, câu hỏi và kết quả quiz được lưu ổn định trong SQLite.
+Ứng dụng hoạt động tốt trên các thiết bị Android phổ biến.
+Nội dung hiển thị rõ ràng, dễ đọc.
+Thời gian xử lý OCR và AI ở mức chấp nhận được.
+Có thông báo lỗi khi ảnh không thể nhận dạng văn bản.
+Có thông báo lỗi khi API AI không phản hồi hoặc mất kết nối mạng.
+Không làm mất dữ liệu khi người dùng thoát ứng dụng.
+Hạn chế các thao tác phức tạp để người dùng có thể sử dụng nhanh trong quá trình học tập.
+Bảo vệ API key ở mức cơ bản, không hiển thị trực tiếp trên giao diện người dùng.
+Dữ liệu học tập được lưu cục bộ trên thiết bị, phù hợp với phạm vi MVP của đồ án.
+8. Thiết kế sơ bộ hệ thống
+Hệ thống SmartEdu AI gồm các thành phần chính:
+Giao diện người dùng Android: cho phép người dùng quản lý môn học, thêm tài liệu, xem OCR, tạo tóm tắt, tạo câu hỏi, làm quiz và xem lịch sử học tập.
+Module quản lý môn học: thực hiện các chức năng thêm, xem, sửa và xóa môn học.
+Module quản lý tài liệu: lưu thông tin tài liệu, ảnh tài liệu, nội dung OCR và liên kết tài liệu với môn học.
+Module OCR: sử dụng Google ML Kit để nhận dạng văn bản từ ảnh.
+Module AI Processing: gửi nội dung OCR đến Gemini API hoặc OpenAI API để tạo tóm tắt và câu hỏi ôn tập.
+Module Quiz: hiển thị câu hỏi, nhận đáp án từ người dùng, chấm điểm và tạo kết quả làm bài.
+Module SQLite: lưu trữ dữ liệu môn học, tài liệu, tóm tắt, câu hỏi và kết quả quiz trên thiết bị.
+Module hiển thị kết quả: trình bày nội dung OCR, tóm tắt, câu hỏi, đáp án, giải thích và lịch sử điểm số.
+Luồng xử lý chính:
+Người dùng tạo môn học. Sau đó, người dùng thêm tài liệu vào môn học bằng cách chụp ảnh hoặc chọn ảnh từ thư viện. Ứng dụng sử dụng OCR để nhận dạng văn bản trong ảnh và cho phép người dùng kiểm tra, chỉnh sửa nội dung OCR. Nội dung này được lưu vào SQLite và có thể được gửi đến AI để tạo tóm tắt hoặc câu hỏi ôn tập. Khi câu hỏi được tạo, người dùng có thể làm quiz trực tiếp trên ứng dụng. Ứng dụng tự động chấm điểm, hiển thị kết quả và lưu lịch sử học tập vào SQLite.
+9. Công nghệ sử dụng
+Đề tài sử dụng các công nghệ chính sau:
+Android Java: xây dựng ứng dụng Android.
+XML UI: thiết kế giao diện người dùng.
+Google ML Kit OCR: nhận dạng văn bản từ ảnh tài liệu.
+Gemini API hoặc OpenAI API: hỗ trợ tạo tóm tắt và câu hỏi ôn tập.
+SQLite: lưu trữ dữ liệu cục bộ trên thiết bị.
+Camera Intent / Gallery Intent: hỗ trợ chụp ảnh và chọn ảnh từ thư viện.
+RecyclerView: hiển thị danh sách môn học, tài liệu, câu hỏi và lịch sử kết quả.
+JSON: xử lý dữ liệu gửi và nhận từ API AI.

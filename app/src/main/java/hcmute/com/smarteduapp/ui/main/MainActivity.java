@@ -150,8 +150,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onStop() {
+        super.onStop();
+        // onPause() can be triggered by short-lived system UI. onStop() is a
+        // better approximation of the user really leaving the app.
+        if (isChangingConfigurations()) {
+            return;
+        }
         if (isFocusQuizInProgress() && !focusQuizSubmitting) {
             focusQuizExitCount++;
         }

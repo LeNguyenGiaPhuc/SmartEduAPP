@@ -38,6 +38,10 @@ public class DocumentTextScannerService {
         void onSuccess(String text);
 
         void onError(Exception exception);
+
+        default void onPartialFailure(int failedCount, int totalCount) {
+            // Optional callback for screens that want to show per-file status.
+        }
     }
 
     public void scanAttachments(Context context, List<String> attachmentUris, ScanCallback callback) {
@@ -47,7 +51,7 @@ public class DocumentTextScannerService {
             return;
         }
 
-        scanAttachmentQueue(context, safeUris, 0, new StringBuilder(), callback);
+        scanAttachmentQueue(context, safeUris, 0, new StringBuilder(), 0, callback);
     }
 
     private void scanAttachmentQueue(
@@ -55,27 +59,32 @@ public class DocumentTextScannerService {
             List<String> attachmentUris,
             int index,
             StringBuilder resultBuilder,
+            int failedCount,
             ScanCallback callback
     ) {
         if (index >= attachmentUris.size()) {
             callback.onSuccess(resultBuilder.toString().trim());
+            if (failedCount > 0) {
+                callback.onPartialFailure(failedCount, attachmentUris.size());
+            }
             return;
         }
 
         String attachmentUri = attachmentUris.get(index);
         String mimeType = getMimeType(context, attachmentUri);
+        final int currentFailedCount = failedCount;
 
         if (isImageAttachment(attachmentUri, mimeType)) {
             ocrService.recognizeText(context, Uri.parse(attachmentUri), new MlKitOcrService.OcrCallback() {
                 @Override
                 public void onSuccess(String recognizedText) {
                     appendPageText(resultBuilder, recognizedText);
-                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, currentFailedCount, callback);
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, currentFailedCount + 1, callback);
                 }
             });
             return;
@@ -85,8 +94,9 @@ public class DocumentTextScannerService {
             try {
                 appendPageText(resultBuilder, readTextFile(context, Uri.parse(attachmentUri)));
             } catch (Exception ignored) {
+                failedCount++;
             }
-            scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+            scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, failedCount, callback);
             return;
         }
 
@@ -94,28 +104,42 @@ public class DocumentTextScannerService {
             try {
                 appendPageText(resultBuilder, readDocxFile(context, Uri.parse(attachmentUri)));
             } catch (Exception ignored) {
+                failedCount++;
             }
-            scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+            scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, failedCount, callback);
             return;
         }
 
         if (isPdf(attachmentUri, mimeType)) {
+            final boolean[] pdfHadPageFailure = {false};
             scanPdf(context, Uri.parse(attachmentUri), new ScanCallback() {
+                @Override
+                public void onPartialFailure(int failedCount, int totalCount) {
+                    pdfHadPageFailure[0] = failedCount > 0;
+                }
+
                 @Override
                 public void onSuccess(String text) {
                     appendPageText(resultBuilder, text);
-                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+                    scanAttachmentQueue(
+                            context,
+                            attachmentUris,
+                            index + 1,
+                            resultBuilder,
+                            currentFailedCount + (pdfHadPageFailure[0] ? 1 : 0),
+                            callback
+                    );
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+                    scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, currentFailedCount + 1, callback);
                 }
             });
             return;
         }
 
-        scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, callback);
+        scanAttachmentQueue(context, attachmentUris, index + 1, resultBuilder, failedCount + 1, callback);
     }
 
     private String readTextFile(Context context, Uri uri) throws Exception {
@@ -183,7 +207,7 @@ public class DocumentTextScannerService {
             return;
         }
 
-        scanPdfPage(renderer, descriptor, 0, new StringBuilder(), callback);
+        scanPdfPage(renderer, descriptor, 0, new StringBuilder(), 0, renderer.getPageCount(), callback);
     }
 
     private void scanPdfPage(
@@ -191,10 +215,15 @@ public class DocumentTextScannerService {
             ParcelFileDescriptor descriptor,
             int pageIndex,
             StringBuilder resultBuilder,
+            int failedPageCount,
+            int totalPageCount,
             ScanCallback callback
     ) {
         if (pageIndex >= renderer.getPageCount()) {
             closePdf(renderer, descriptor);
+            if (failedPageCount > 0) {
+                callback.onPartialFailure(failedPageCount, totalPageCount);
+            }
             callback.onSuccess(resultBuilder.toString().trim());
             return;
         }
@@ -212,13 +241,13 @@ public class DocumentTextScannerService {
             public void onSuccess(String recognizedText) {
                 appendPageText(resultBuilder, recognizedText);
                 bitmap.recycle();
-                scanPdfPage(renderer, descriptor, pageIndex + 1, resultBuilder, callback);
+                scanPdfPage(renderer, descriptor, pageIndex + 1, resultBuilder, failedPageCount, totalPageCount, callback);
             }
 
             @Override
             public void onError(Exception exception) {
                 bitmap.recycle();
-                scanPdfPage(renderer, descriptor, pageIndex + 1, resultBuilder, callback);
+                scanPdfPage(renderer, descriptor, pageIndex + 1, resultBuilder, failedPageCount + 1, totalPageCount, callback);
             }
         });
     }

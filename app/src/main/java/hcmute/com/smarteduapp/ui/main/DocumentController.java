@@ -114,7 +114,7 @@ class DocumentController {
             return;
         }
 
-        activity.documentRepository.create(activity.selectedSubjectId, title, null, new RepositoryCallback<Long>() {
+        activity.documentRepository.create(activity.selectedSubjectId, title, new RepositoryCallback<Long>() {
             @Override
             public void onSuccess(Long id) {
                 if (activity.pendingDocumentAttachmentUris.isEmpty()) {
@@ -854,6 +854,18 @@ class DocumentController {
                     @Override
                     public void onSuccess(String text) {
                         activity.runOnUiThread(() -> handleOcrResult(text));
+                    }
+
+                    @Override
+                    public void onPartialFailure(int failedCount, int totalCount) {
+                        if (failedCount < totalCount) {
+                            activity.runOnUiThread(() -> Toast.makeText(
+                                    activity,
+                                    "Đã quét được " + (totalCount - failedCount) + "/" + totalCount
+                                            + " file. Một số file chưa đọc được.",
+                                    Toast.LENGTH_LONG
+                            ).show());
+                        }
                     }
 
                     @Override

@@ -4,7 +4,6 @@ import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
-import androidx.room.Update;
 
 import java.util.List;
 
@@ -18,12 +17,6 @@ public interface StudyDocumentAttachmentDao {
     @Insert
     long insert(StudyDocumentAttachment attachment);
 
-    @Update
-    int update(StudyDocumentAttachment attachment);
-
     @Delete
     int delete(StudyDocumentAttachment attachment);
-
-    @Query("DELETE FROM document_images WHERE document_id = :documentId")
-    void deleteByDocumentId(long documentId);
 }

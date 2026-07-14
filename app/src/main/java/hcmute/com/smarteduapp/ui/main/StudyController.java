@@ -275,7 +275,7 @@ class StudyController {
                 new GeminiService.GeminiCallback() {
                     @Override
                     public void onSuccess(String quizJson) {
-                        activity.runOnUiThread(() -> saveGeneratedQuestions(quizJson, documentId));
+                        activity.runOnUiThread(() -> saveGeneratedQuestions(quizJson, documentId, questionCount));
                     }
 
                     @Override
@@ -303,12 +303,16 @@ class StudyController {
 
 
     void saveGeneratedQuestions(String quizJson, long documentId) {
+        saveGeneratedQuestions(quizJson, documentId, -1);
+    }
+
+    void saveGeneratedQuestions(String quizJson, long documentId, int expectedCount) {
     if (activity.selectedDocument == null) {
         return;
     }
 
     try {
-        List<StudyQuestion> questions = activity.quizParser.parse(quizJson, documentId);
+        List<StudyQuestion> questions = activity.quizParser.parse(quizJson, documentId, expectedCount);
         if (questions.isEmpty()) {
             setQuizLoading(false);
             Toast.makeText(activity, "Gemini chưa trả về câu hỏi hợp lệ. Vui lòng thử lại", Toast.LENGTH_SHORT).show();

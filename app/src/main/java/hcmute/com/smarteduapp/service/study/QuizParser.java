@@ -14,6 +14,14 @@ import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
  */
 public class QuizParser {
     public List<StudyQuestion> parse(String quizJson, long documentId) throws Exception {
+        return parse(quizJson, documentId, -1);
+    }
+
+    /**
+     * Parses and validates the exact number of questions requested from Gemini.
+     * Missing fields are rejected instead of being replaced with fake demo data.
+     */
+    public List<StudyQuestion> parse(String quizJson, long documentId, int expectedCount) throws Exception {
         String cleanJson = extractJsonPayload(quizJson);
         JSONArray array;
         if (cleanJson.startsWith("{")) {
@@ -29,22 +37,39 @@ public class QuizParser {
             array = new JSONArray(cleanJson);
         }
 
+        if (array.length() < 3) {
+            throw new IllegalArgumentException("Quiz phải có ít nhất 3 câu hỏi");
+        }
+        if (expectedCount > 0 && array.length() != expectedCount) {
+            throw new IllegalArgumentException(
+                    "Gemini trả về " + array.length() + " câu, cần " + expectedCount + " câu"
+            );
+        }
+
         List<StudyQuestion> questions = new ArrayList<>();
         for (int i = 0; i < array.length(); i++) {
             JSONObject item = array.getJSONObject(i);
             questions.add(new StudyQuestion(
                     documentId,
-                    item.optString("questionText", "Câu hỏi " + (i + 1)),
-                    item.optString("optionA", "Đáp án A"),
-                    item.optString("optionB", "Đáp án B"),
-                    item.optString("optionC", "Đáp án C"),
-                    item.optString("optionD", "Đáp án D"),
-                    normalizeCorrectOption(item.optString("correctOption", "A")),
-                    item.optString("explanation", ""),
+                    requiredString(item, "questionText", i),
+                    requiredString(item, "optionA", i),
+                    requiredString(item, "optionB", i),
+                    requiredString(item, "optionC", i),
+                    requiredString(item, "optionD", i),
+                    normalizeCorrectOption(requiredString(item, "correctOption", i)),
+                    requiredString(item, "explanation", i),
                     i + 1
             ));
         }
         return questions;
+    }
+
+    private String requiredString(JSONObject item, String key, int index) {
+        String value = item.optString(key, "").trim();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("Câu " + (index + 1) + " thiếu trường " + key);
+        }
+        return value;
     }
 
     private String extractJsonPayload(String rawText) {
@@ -76,14 +101,14 @@ public class QuizParser {
 
     private String normalizeCorrectOption(String option) {
         if (isBlank(option)) {
-            return "A";
+            throw new IllegalArgumentException("Thiếu đáp án đúng");
         }
         String normalized = option.trim().toUpperCase(Locale.US);
         if (normalized.startsWith("A")) return "A";
         if (normalized.startsWith("B")) return "B";
         if (normalized.startsWith("C")) return "C";
         if (normalized.startsWith("D")) return "D";
-        return "A";
+        throw new IllegalArgumentException("Đáp án đúng phải là A, B, C hoặc D");
     }
 
     private boolean isBlank(String value) {

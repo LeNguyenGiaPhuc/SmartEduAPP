@@ -20,6 +20,7 @@ import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
 
 
 public class StudyRepository {
+    private final AppDatabase database;
     private final StudySummaryDao summaryDao;
     private final StudyQuestionDao questionDao;
     private final QuizAttemptDao quizAttemptDao;
@@ -29,7 +30,7 @@ public class StudyRepository {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public StudyRepository(Context context){
-        AppDatabase database = AppDatabase.getInstance(context);
+        database = AppDatabase.getInstance(context);
         summaryDao = database.studySummaryDao();
         questionDao = database.studyQuestionDao();
         quizAttemptDao = database.quizAttemptDao();
@@ -79,11 +80,13 @@ public class StudyRepository {
     public void replaceQuestions(long documentId, List<StudyQuestion> questions, RepositoryCallback<Integer> callback) {
     executor.execute(() -> {
         try {
-            questionDao.deleteByDocumentId(documentId);
+            database.runInTransaction(() -> {
+                questionDao.deleteByDocumentId(documentId);
 
-            for (StudyQuestion question : questions) {
-                questionDao.insert(question);
-            }
+                for (StudyQuestion question : questions) {
+                    questionDao.insert(question);
+                }
+            });
 
             mainHandler.post(() -> callback.onSuccess(questions.size()));
         } catch (Exception exception) {
@@ -118,12 +121,14 @@ public class StudyRepository {
     public void clearGeneratedDataByDocumentId(long documentId, RepositoryCallback<Integer> callback) {
         executor.execute(() -> {
             try {
-                int deletedCount = 0;
-                deletedCount += summaryDao.deleteByDocumentId(documentId);
-                deletedCount += questionDao.deleteByDocumentId(documentId);
-                deletedCount += quizAttemptAnswerDao.deleteByDocumentId(documentId);
-                deletedCount += quizAttemptDao.deleteByDocumentId(documentId);
-                int result = deletedCount;
+                int[] deletedCount = {0};
+                database.runInTransaction(() -> {
+                    deletedCount[0] += summaryDao.deleteByDocumentId(documentId);
+                    deletedCount[0] += questionDao.deleteByDocumentId(documentId);
+                    deletedCount[0] += quizAttemptAnswerDao.deleteByDocumentId(documentId);
+                    deletedCount[0] += quizAttemptDao.deleteByDocumentId(documentId);
+                });
+                int result = deletedCount[0];
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
@@ -135,14 +140,17 @@ public class StudyRepository {
                                              RepositoryCallback<Long> callback) {
         executor.execute(() -> {
             try {
-                long attemptId = quizAttemptDao.insert(attempt);
-                for (QuizAttemptAnswer answer : answers) {
-                    answer.attempt_id = attemptId;
-                }
-                if (!answers.isEmpty()) {
-                    quizAttemptAnswerDao.insertAll(answers);
-                }
-                mainHandler.post(() -> callback.onSuccess(attemptId));
+                long[] attemptId = {0L};
+                database.runInTransaction(() -> {
+                    attemptId[0] = quizAttemptDao.insert(attempt);
+                    for (QuizAttemptAnswer answer : answers) {
+                        answer.attempt_id = attemptId[0];
+                    }
+                    if (!answers.isEmpty()) {
+                        quizAttemptAnswerDao.insertAll(answers);
+                    }
+                });
+                mainHandler.post(() -> callback.onSuccess(attemptId[0]));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
             }
