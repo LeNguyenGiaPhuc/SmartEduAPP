@@ -40,7 +40,7 @@ app/src/main/java/hcmute/com/smarteduapp/
 - `service/ai`: AI requests, prompts and structured JSON responses.
 - `service/study`: AI quiz parsing and quiz scoring logic that should not live in UI code.
 - `ui/common`: Shared view-building utilities.
-- `ui/main`: Main navigation flow, home sidebar controller and home dashboard renderer.
+- `ui/main`: Main navigation flow, home sidebar controller, home dashboard and progress dashboard.
 - `ui/subject`: Subject/document list rendering.
 - `ui/document`: Document attachment preview and thumbnail rendering.
 - `ui/study`: Summary, quiz, result, history and AI chat rendering.
@@ -64,6 +64,7 @@ rendering has been split into renderer/controller classes so each module is easi
 - `DocumentController`: manages document CRUD, attachment file flow, OCR and scanned-content screens.
 - `StudyController`: manages AI summary, AI chat, quiz and quiz result flow.
 - `HistoryController`: manages learning-history loading and rendering.
+- `ProgressController`: loads quiz attempts from Room and renders learning progress statistics.
 - `HomeMenuController`: opens/closes the sidebar menu.
 - `HomeDashboardRenderer`: renders recent activity and recent quiz history on the home screen.
 - `SubjectListRenderer`: renders subject cards and document cards.

@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
     QuizUiRenderer quizUiRenderer;
     SubjectListRenderer subjectListRenderer;
     HistoryController historyController;
+    ProgressController progressController;
     SubjectController subjectController;
     StudyController studyController;
     DocumentController documentController;
@@ -123,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
         quizUiRenderer = new QuizUiRenderer(this);
         subjectListRenderer = new SubjectListRenderer(this);
         historyController = new HistoryController(this);
+        progressController = new ProgressController(this);
         subjectController = new SubjectController(this);
         studyController = new StudyController(this);
         documentController = new DocumentController(this);
@@ -269,6 +271,10 @@ public class MainActivity extends AppCompatActivity {
         bindClick(R.id.buttonLearningHistory, () -> {
             hideHomeMenu();
             showHistory();
+        });
+        bindClick(R.id.buttonProgressDashboard, () -> {
+            hideHomeMenu();
+            showProgress();
         });
         bindClick(R.id.buttonLogout, () -> {
             hideHomeMenu();
@@ -440,6 +446,10 @@ public class MainActivity extends AppCompatActivity {
     void showHistory() {
         quizResultOpenedFromHome = false;
         historyController.showHistory();
+    }
+
+    void showProgress() {
+        progressController.showProgress();
     }
 
     void startFocusQuizSession(boolean enabled) {
