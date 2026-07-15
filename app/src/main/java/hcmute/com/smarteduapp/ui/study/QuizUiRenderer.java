@@ -71,6 +71,43 @@ public class QuizUiRenderer {
         adapter.submit(cards);
     }
 
+    public void renderSingleQuestion(
+            List<StudyQuestion> questions,
+            Map<Long, String> selectedAnswers,
+            int currentIndex
+    ) {
+        TextView subtitle = activity.findViewById(R.id.quizSubtitle);
+        TextView previousButton = activity.findViewById(R.id.buttonPreviousQuestion);
+        TextView nextButton = activity.findViewById(R.id.buttonCheckAnswers);
+        RecyclerView container = activity.findViewById(R.id.quizQuestionsContainer);
+        UiViewFactory.setupVerticalRecycler(container);
+
+        if (questions.isEmpty()) {
+            subtitle.setText("0 câu hỏi");
+            previousButton.setVisibility(View.INVISIBLE);
+            nextButton.setText("Nộp bài");
+            return;
+        }
+
+        int safeIndex = Math.max(0, Math.min(currentIndex, questions.size() - 1));
+        subtitle.setText("Câu " + (safeIndex + 1) + " / " + questions.size());
+        previousButton.setVisibility(safeIndex == 0 ? View.INVISIBLE : View.VISIBLE);
+        nextButton.setText(safeIndex == questions.size() - 1 ? "Nộp bài" : "Câu tiếp theo");
+
+        SimpleCardAdapter adapter = new SimpleCardAdapter();
+        List<SimpleCardAdapter.CardFactory> cards = new ArrayList<>();
+        StudyQuestion question = questions.get(safeIndex);
+        cards.add((parent, ignored) -> createQuizQuestionCard(
+                parent,
+                question,
+                safeIndex,
+                questions.size(),
+                selectedAnswers
+        ));
+        container.setAdapter(adapter);
+        adapter.submit(cards);
+    }
+
     public void renderQuizResult(
             QuizAttempt latestQuizAttempt,
             StudyDocument selectedDocument,

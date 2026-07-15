@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
     StudyController studyController;
     DocumentController documentController;
     List<StudyQuestion> currentQuizQuestions = new ArrayList<>();
+    int currentQuizQuestionIndex;
     final Map<Long, String> selectedQuizAnswers = new HashMap<>();
     final LinkedHashMap<Long, Subject> recentSubjects = new LinkedHashMap<>();
     QuizAttempt latestQuizAttempt;

@@ -1,7 +1,11 @@
 package hcmute.com.smarteduapp.ui.main;
 
 import android.view.View;
+import android.text.InputType;
 import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -252,7 +256,7 @@ class StudyController {
     activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
         @Override
         public void onSuccess(Integer result) {
-            requestGeminiQuiz(ocrText, documentId);
+            showQuizSetupDialog(ocrText, documentId);
         }
 
         @Override
@@ -264,14 +268,131 @@ class StudyController {
     }
 
 
+    private void showQuizSetupDialog(String ocrText, long documentId) {
+        int defaultCount = estimateQuizQuestionCount(ocrText);
+
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        int horizontalPadding = UiViewFactory.dp(activity, 4);
+        form.setPadding(horizontalPadding, 0, horizontalPadding, 0);
+
+        TextView countLabel = UiViewFactory.createText(
+                activity,
+                "Số câu hỏi (3 - 10)",
+                14,
+                R.color.ink,
+                true
+        );
+        EditText countInput = new EditText(activity);
+        countInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        countInput.setSingleLine(true);
+        countInput.setText(String.valueOf(defaultCount));
+        countInput.setSelectAllOnFocus(true);
+
+        TextView difficultyLabel = UiViewFactory.createText(
+                activity,
+                "Độ khó",
+                14,
+                R.color.ink,
+                true
+        );
+        Spinner difficultyInput = new Spinner(activity);
+        String[] difficulties = {"Dễ", "Trung bình", "Khó"};
+        ArrayAdapter<String> difficultyAdapter = new ArrayAdapter<>(
+                activity,
+                android.R.layout.simple_spinner_item,
+                difficulties
+        );
+        difficultyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        difficultyInput.setAdapter(difficultyAdapter);
+        difficultyInput.setSelection(1);
+
+        TextView descriptionLabel = UiViewFactory.createText(
+                activity,
+                "Mô tả hướng ra đề (không bắt buộc)",
+                14,
+                R.color.ink,
+                true
+        );
+        EditText descriptionInput = new EditText(activity);
+        descriptionInput.setHint("Ví dụ: tập trung vào khái niệm và ví dụ thực tế");
+        descriptionInput.setGravity(android.view.Gravity.TOP);
+        descriptionInput.setMinLines(3);
+        descriptionInput.setInputType(
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        );
+
+        form.addView(countLabel);
+        form.addView(countInput);
+        form.addView(difficultyLabel);
+        form.addView(difficultyInput);
+        form.addView(descriptionLabel);
+        form.addView(descriptionInput);
+
+        AlertDialog dialog = new AlertDialog.Builder(activity)
+                .setTitle("Thiết lập quiz")
+                .setView(form)
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Tạo quiz", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(view -> {
+                    int questionCount;
+                    try {
+                        questionCount = Integer.parseInt(
+                                countInput.getText().toString().trim()
+                        );
+                    } catch (NumberFormatException exception) {
+                        countInput.setError("Nhập số câu từ 3 đến 10");
+                        return;
+                    }
+
+                    if (questionCount < 3 || questionCount > 10) {
+                        countInput.setError("Số câu phải từ 3 đến 10");
+                        return;
+                    }
+
+                    String difficulty = difficultyInput.getSelectedItem().toString();
+                    String description = descriptionInput.getText().toString().trim();
+                    dialog.dismiss();
+                    requestGeminiQuiz(
+                            ocrText,
+                            documentId,
+                            questionCount,
+                            difficulty,
+                            description
+                    );
+                }));
+        dialog.show();
+    }
+
+
     void requestGeminiQuiz(String ocrText, long documentId) {
-        int questionCount = estimateQuizQuestionCount(ocrText);
+        requestGeminiQuiz(
+                ocrText,
+                documentId,
+                estimateQuizQuestionCount(ocrText),
+                "Trung bình",
+                ""
+        );
+    }
+
+    void requestGeminiQuiz(
+            String ocrText,
+            long documentId,
+            int questionCount,
+            String difficulty,
+            String description
+    ) {
         setQuizLoading(true);
         Toast.makeText(activity, "Đang tạo " + questionCount + " câu quiz bằng Gemini...", Toast.LENGTH_SHORT).show();
 
         activity.geminiService.generateQuiz(
                 ocrText,
                 questionCount,
+                difficulty,
+                description,
                 new GeminiService.GeminiCallback() {
                     @Override
                     public void onSuccess(String quizJson) {
@@ -470,15 +591,17 @@ class StudyController {
         activity.setContentView(R.layout.screen_questions);
         activity.applySystemBars();
         activity.bindClick(R.id.backProcessFromQuestions, this::handleBackFromQuestions);
-        activity.bindClick(R.id.buttonCheckAnswers, this::submitQuizAnswers);
+        activity.bindClick(R.id.buttonPreviousQuestion, this::showPreviousQuestion);
+        activity.bindClick(R.id.buttonCheckAnswers, this::showNextQuestionOrSubmit);
         if (reloadFromDatabase || activity.currentQuizQuestions.isEmpty()) {
+            activity.currentQuizQuestionIndex = 0;
             loadQuizQuestionsFromDatabase();
             return;
         }
 
         TextView title = activity.findViewById(R.id.quizTitle);
         title.setText("Quiz: " + activity.selectedDocument.title);
-        activity.selectedQuizAnswers.clear();
+        activity.currentQuizQuestionIndex = 0;
         renderQuizQuestions(activity.currentQuizQuestions);
     }
 
@@ -512,6 +635,7 @@ class StudyController {
                     @Override
                     public void onSuccess(List<StudyQuestion> questions) {
                         activity.currentQuizQuestions = questions;
+                        activity.currentQuizQuestionIndex = 0;
                         activity.selectedQuizAnswers.clear();
                         renderQuizQuestions(questions);
                     }
@@ -526,7 +650,37 @@ class StudyController {
 
 
     void renderQuizQuestions(List<StudyQuestion> questions) {
-        activity.quizUiRenderer.renderQuizQuestions(questions, activity.selectedQuizAnswers);
+        activity.quizUiRenderer.renderSingleQuestion(
+                questions,
+                activity.selectedQuizAnswers,
+                activity.currentQuizQuestionIndex
+        );
+    }
+
+
+    private void showPreviousQuestion() {
+        if (activity.currentQuizQuestionIndex <= 0) {
+            return;
+        }
+
+        activity.currentQuizQuestionIndex--;
+        renderQuizQuestions(activity.currentQuizQuestions);
+    }
+
+
+    private void showNextQuestionOrSubmit() {
+        if (activity.currentQuizQuestions.isEmpty()) {
+            return;
+        }
+
+        if (activity.currentQuizQuestionIndex
+                < activity.currentQuizQuestions.size() - 1) {
+            activity.currentQuizQuestionIndex++;
+            renderQuizQuestions(activity.currentQuizQuestions);
+            return;
+        }
+
+        submitQuizAnswers();
     }
 
 

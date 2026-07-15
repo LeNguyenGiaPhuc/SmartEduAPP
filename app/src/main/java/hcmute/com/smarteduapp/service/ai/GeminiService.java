@@ -98,13 +98,28 @@ public class GeminiService {
     }
 
     public void generateQuiz(String ocrText, int questionCount, GeminiCallback callback) {
+        generateQuiz(ocrText, questionCount, "Trung bình", "", callback);
+    }
+
+    public void generateQuiz(
+            String ocrText,
+            int questionCount,
+            String difficulty,
+            String description,
+            GeminiCallback callback
+    ) {
         if (BuildConfig.GEMINI_API_KEY.trim().isEmpty()) {
             callback.onError(new IllegalStateException("Missing Gemini API key"));
             return;
         }
 
         try {
-            String prompt = buildQuizPrompt(ocrText, questionCount);
+            String prompt = buildQuizPrompt(
+                    ocrText,
+                    questionCount,
+                    difficulty,
+                    description
+            );
 
             JSONObject requestJson = new JSONObject()
                     .put("contents", new JSONArray()
@@ -249,7 +264,20 @@ public class GeminiService {
                 + question;
     }
 
-    private String buildQuizPrompt(String ocrText, int questionCount) {
+    private String buildQuizPrompt(
+            String ocrText,
+            int questionCount,
+            String difficulty,
+            String description
+    ) {
+        ocrText = "Difficulty: " + difficulty + ".\n"
+                + (description == null || description.trim().isEmpty()
+                ? ""
+                : "User direction: " + description.trim() + "\n")
+                + ocrText;
+        String customDirection = description == null || description.trim().isEmpty()
+                ? ""
+                : "Định hướng của người học: " + description.trim() + "\n";
         return "Bạn là trợ lý học tập cho học sinh/sinh viên.\n"
                 + "Hãy tạo một bộ " + questionCount + " câu hỏi trắc nghiệm từ nội dung OCR sau.\n"
                 + "Số lượng câu hỏi đã được app chọn dựa trên độ dài và độ phức tạp của nội dung.\n"
