@@ -229,6 +229,20 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/buttonReviewMistakes"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_action_chip_blue"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="Ôn câu sai"
+            android:textColor="@color/brand_blue_dark"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"

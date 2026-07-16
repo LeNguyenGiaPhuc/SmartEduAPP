@@ -14,6 +14,9 @@ public interface QuizAttemptDao {
     @Query("SELECT * FROM quiz_attempts WHERE document_id = :documentId ORDER BY completedAt DESC")
     List<QuizAttempt> getByDocumentId(long documentId);
 
+    @Query("SELECT * FROM quiz_attempts WHERE document_id = :documentId ORDER BY completedAt DESC LIMIT 1")
+    QuizAttempt getLatestByDocumentId(long documentId);
+
     @Query("SELECT * FROM quiz_attempts ORDER BY completedAt DESC")
     List<QuizAttempt> getAll();
 

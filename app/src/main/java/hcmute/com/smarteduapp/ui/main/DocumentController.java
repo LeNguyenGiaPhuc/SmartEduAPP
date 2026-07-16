@@ -482,6 +482,7 @@ class DocumentController {
         activity.bindClick(R.id.buttonSummary, activity::createSummaryFromCurrentDocument);
         activity.bindClick(R.id.buttonCreateQuiz, activity::createQuizFromCurrentDocument);
         activity.bindClick(R.id.buttonExplain, activity::showAiChat);
+        activity.bindClick(R.id.buttonReviewMistakes, activity::reviewMistakesForCurrentDocument);
         activity.bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
         activity.bindClick(R.id.buttonAddMoreImages, () -> activity.addMoreAttachmentsPickerLauncher.launch(new String[]{
                 "image/*",

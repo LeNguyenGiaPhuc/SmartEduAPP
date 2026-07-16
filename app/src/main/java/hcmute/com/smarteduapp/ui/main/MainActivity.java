@@ -435,6 +435,10 @@ public class MainActivity extends AppCompatActivity {
         studyController.createQuizFromCurrentDocument();
     }
 
+    void reviewMistakesForCurrentDocument() {
+        studyController.reviewMistakesForCurrentDocument();
+    }
+
     void showQuestions() {
         studyController.showQuestions();
     }

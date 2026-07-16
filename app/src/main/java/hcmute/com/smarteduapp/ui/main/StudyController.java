@@ -28,6 +28,7 @@ import hcmute.com.smarteduapp.ui.common.UiViewFactory;
  */
 class StudyController {
     private final MainActivity activity;
+    private boolean mistakeReviewMode;
 
     StudyController(MainActivity activity) {
         this.activity = activity;
@@ -475,6 +476,7 @@ class StudyController {
                     @Override
                     public void onSuccess(Integer result) {
                         setQuizLoading(false);
+                        mistakeReviewMode = false;
                         activity.latestQuizAttempt = null;
                         activity.selectedQuizAnswers.clear();
                         showFocusQuizModeDialog(true);
@@ -564,6 +566,78 @@ class StudyController {
         showFocusQuizModeDialog(true);
     }
 
+    /**
+     * Starts a short quiz from the questions answered incorrectly in the latest attempt.
+     * The answer snapshot is used so this still works after the original quiz is regenerated.
+     */
+    void reviewMistakesForCurrentDocument() {
+        if (activity.selectedDocument == null) {
+            return;
+        }
+
+        long documentId = activity.selectedDocument.id;
+        activity.studyRepository.getLatestQuizAttempt(documentId, new RepositoryCallback<QuizAttempt>() {
+            @Override
+            public void onSuccess(QuizAttempt attempt) {
+                if (attempt == null) {
+                    Toast.makeText(activity, "Chưa có lần làm quiz để ôn câu sai", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                activity.studyRepository.getQuizAttemptAnswers(attempt.id,
+                        new RepositoryCallback<List<QuizAttemptAnswer>>() {
+                            @Override
+                            public void onSuccess(List<QuizAttemptAnswer> answers) {
+                                List<StudyQuestion> wrongQuestions = new ArrayList<>();
+                                for (QuizAttemptAnswer answer : answers) {
+                                    if (!answer.correct) {
+                                        wrongQuestions.add(convertAnswerToQuestion(answer));
+                                    }
+                                }
+
+                                if (wrongQuestions.isEmpty()) {
+                                    Toast.makeText(activity, "Bạn đã trả lời đúng toàn bộ câu trong lần gần nhất", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+
+                                mistakeReviewMode = true;
+                                activity.latestQuizAttempt = null;
+                                activity.currentQuizQuestions = wrongQuestions;
+                                activity.selectedQuizAnswers.clear();
+                                activity.currentQuizQuestionIndex = 0;
+                                showFocusQuizModeDialog(false);
+                            }
+
+                            @Override
+                            public void onError(Exception exception) {
+                                Toast.makeText(activity, "Không thể tải các câu sai", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(activity, "Không thể tải lịch sử quiz", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private StudyQuestion convertAnswerToQuestion(QuizAttemptAnswer answer) {
+        StudyQuestion question = new StudyQuestion(
+                answer.document_id,
+                answer.questionText,
+                answer.optionA,
+                answer.optionB,
+                answer.optionC,
+                answer.optionD,
+                answer.correctOption,
+                answer.explanation,
+                answer.questionOrder
+        );
+        question.id = answer.question_id > 0 ? answer.question_id : answer.id;
+        return question;
+    }
+
 
     void showFocusQuizModeDialog(boolean reloadFromDatabase) {
         new AlertDialog.Builder(activity)
@@ -600,7 +674,7 @@ class StudyController {
         }
 
         TextView title = activity.findViewById(R.id.quizTitle);
-        title.setText("Quiz: " + activity.selectedDocument.title);
+        title.setText((mistakeReviewMode ? "Ôn câu sai: " : "Quiz: ") + activity.selectedDocument.title);
         activity.currentQuizQuestionIndex = 0;
         renderQuizQuestions(activity.currentQuizQuestions);
     }
@@ -627,7 +701,7 @@ class StudyController {
         }
 
         TextView title = activity.findViewById(R.id.quizTitle);
-        title.setText("Quiz: " + activity.selectedDocument.title);
+        title.setText((mistakeReviewMode ? "Ôn câu sai: " : "Quiz: ") + activity.selectedDocument.title);
 
         activity.studyRepository.getQuestionsByDocumentId(
                 activity.selectedDocument.id,

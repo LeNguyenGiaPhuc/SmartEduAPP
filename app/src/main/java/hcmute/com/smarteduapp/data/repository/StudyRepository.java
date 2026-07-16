@@ -168,6 +168,17 @@ public class StudyRepository {
         });
     }
 
+    public void getLatestQuizAttempt(long documentId, RepositoryCallback<QuizAttempt> callback) {
+        executor.execute(() -> {
+            try {
+                QuizAttempt attempt = quizAttemptDao.getLatestByDocumentId(documentId);
+                mainHandler.post(() -> callback.onSuccess(attempt));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
     public void getQuizAttemptAnswers(long attemptId, RepositoryCallback<List<QuizAttemptAnswer>> callback) {
         executor.execute(() -> {
             try {
