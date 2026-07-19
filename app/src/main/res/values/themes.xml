@@ -11,4 +11,11 @@
     </style>
 
     <style name="Theme.SmartEduAPP" parent="Base.Theme.SmartEduAPP" />
+
+    <style name="Theme.SmartEduAPP.Splash" parent="Theme.SmartEduAPP">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/paper</item>
+        <item name="android:navigationBarColor">@color/paper</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
 </resources>
