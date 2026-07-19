@@ -170,21 +170,45 @@ class StudyController {
         String ocrText = activity.selectedDocument.ocrText == null ? "" : activity.selectedDocument.ocrText.trim();
 
         if(activity.isBlank(ocrText)){
+            setSummaryLoading(false);
             Toast.makeText(activity, "Chưa có nội dung tài liệu để tóm tắt", Toast.LENGTH_SHORT).show();
             return;
         }
 
         long documentId = activity.selectedDocument.id;
-        activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
+        // Read the cached result first. Gemini is only called when this document
+        // does not have a saved summary yet (or after the user deletes it).
+        setSummaryLoading(true);
+        activity.studyRepository.getSummariesByDocumentId(documentId, new RepositoryCallback<List<StudySummary>>() {
             @Override
-            public void onSuccess(Integer result) {
-                requestGeminiSummary(ocrText, documentId);
+            public void onSuccess(List<StudySummary> summaries) {
+                for (StudySummary summary : summaries) {
+                    if (!activity.isBlank(summary.content)) {
+                        activity.latestDisplayedSummary = summary;
+                        setSummaryLoading(false);
+                        activity.showSummary();
+                        return;
+                    }
+                }
+
+                activity.documentRepository.update(activity.selectedDocument, new RepositoryCallback<Integer>() {
+                    @Override
+                    public void onSuccess(Integer result) {
+                        requestGeminiSummary(ocrText, documentId);
+                    }
+
+                    @Override
+                    public void onError(Exception exception) {
+                        setSummaryLoading(false);
+                        Toast.makeText(activity, "Không thể lưu OCR trước khi tóm tắt", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
             @Override
             public void onError(Exception exception) {
                 setSummaryLoading(false);
-                Toast.makeText(activity, "Không thể lưu OCR trước khi tóm tắt", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Lỗi khi kiểm tra tóm tắt đã lưu", Toast.LENGTH_SHORT).show();
             }
         });
     }

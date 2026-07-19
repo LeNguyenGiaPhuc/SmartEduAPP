@@ -40,12 +40,17 @@ public class StudyRepository {
     public void createSummary(long documentId, String content, RepositoryCallback<Long> callback){
         executor.execute(() -> {
             try {
-                StudySummary summary = new StudySummary(
-                    documentId,
-                    content,
-                    System.currentTimeMillis()
-                );
-                long id = summaryDao.insert(summary);
+                long now = System.currentTimeMillis();
+                StudySummary existingSummary = summaryDao.getLatestByDocumentId(documentId);
+                long id;
+
+                if (existingSummary == null) {
+                    StudySummary summary = new StudySummary(documentId, content, now);
+                    id = summaryDao.insert(summary);
+                } else {
+                    summaryDao.updateContent(existingSummary.id, content, now);
+                    id = existingSummary.id;
+                }
 
                 mainHandler.post(() -> callback.onSuccess(id));
             } catch (Exception exception){

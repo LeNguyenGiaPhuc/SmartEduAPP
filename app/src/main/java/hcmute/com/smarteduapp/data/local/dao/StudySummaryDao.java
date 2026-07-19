@@ -14,11 +14,17 @@ public interface StudySummaryDao {
     @Query("SELECT * FROM summaries WHERE document_id = :documentId ORDER BY createdAt DESC")
     List<StudySummary> getByDocumentId(long documentId);
 
+    @Query("SELECT * FROM summaries WHERE document_id = :documentId ORDER BY createdAt DESC LIMIT 1")
+    StudySummary getLatestByDocumentId(long documentId);
+
     @Query("SELECT * FROM summaries ORDER BY createdAt DESC")
     List<StudySummary> getAll();
 
     @Insert
     long insert(StudySummary summary);
+
+    @Query("UPDATE summaries SET content = :content, createdAt = :createdAt WHERE id = :summaryId")
+    int updateContent(long summaryId, String content, long createdAt);
 
     @Delete
     int delete(StudySummary summary);
