@@ -39,6 +39,8 @@ app/src/main/java/hcmute/com/smarteduapp/
 - `service/ocr`: OCR provider integration.
 - `service/ai`: AI requests, prompts and structured JSON responses.
 - `service/study`: AI quiz parsing and quiz scoring logic that should not live in UI code.
+- `data/local/entity/StudyPlan*`: Stores a plan generated from one quiz attempt and its tasks.
+- `data/local/dao/StudyPlan*`: Reads plans and updates task completion state.
 - `ui/common`: Shared view-building utilities.
 - `ui/main`: Main navigation flow, home sidebar controller, home dashboard and progress dashboard.
 - `ui/subject`: Subject/document list rendering.

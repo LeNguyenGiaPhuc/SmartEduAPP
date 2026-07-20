@@ -13,10 +13,14 @@ import hcmute.com.smarteduapp.data.local.dao.QuizAttemptAnswerDao;
 import hcmute.com.smarteduapp.data.local.dao.QuizAttemptDao;
 import hcmute.com.smarteduapp.data.local.dao.StudyQuestionDao;
 import hcmute.com.smarteduapp.data.local.dao.StudySummaryDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyPlanDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyPlanTaskDao;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlan;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlanTask;
 
 
 public class StudyRepository {
@@ -25,6 +29,8 @@ public class StudyRepository {
     private final StudyQuestionDao questionDao;
     private final QuizAttemptDao quizAttemptDao;
     private final QuizAttemptAnswerDao quizAttemptAnswerDao;
+    private final StudyPlanDao studyPlanDao;
+    private final StudyPlanTaskDao studyPlanTaskDao;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -35,6 +41,8 @@ public class StudyRepository {
         questionDao = database.studyQuestionDao();
         quizAttemptDao = database.quizAttemptDao();
         quizAttemptAnswerDao = database.quizAttemptAnswerDao();
+        studyPlanDao = database.studyPlanDao();
+        studyPlanTaskDao = database.studyPlanTaskDao();
     }
 
     public void createSummary(long documentId, String content, RepositoryCallback<Long> callback){
@@ -189,6 +197,60 @@ public class StudyRepository {
             try {
                 List<QuizAttemptAnswer> answers = quizAttemptAnswerDao.getByAttemptId(attemptId);
                 mainHandler.post(() -> callback.onSuccess(answers));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void getStudyPlan(long attemptId, RepositoryCallback<StudyPlan> callback) {
+        executor.execute(() -> {
+            try {
+                StudyPlan plan = studyPlanDao.getByAttemptId(attemptId);
+                mainHandler.post(() -> callback.onSuccess(plan));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void getStudyPlanTasks(long planId, RepositoryCallback<List<StudyPlanTask>> callback) {
+        executor.execute(() -> {
+            try {
+                List<StudyPlanTask> tasks = studyPlanTaskDao.getByPlanId(planId);
+                mainHandler.post(() -> callback.onSuccess(tasks));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void createStudyPlanWithTasks(StudyPlan plan, List<StudyPlanTask> tasks,
+                                         RepositoryCallback<Long> callback) {
+        executor.execute(() -> {
+            try {
+                long[] planId = {0L};
+                database.runInTransaction(() -> {
+                    planId[0] = studyPlanDao.insert(plan);
+                    for (StudyPlanTask task : tasks) {
+                        task.plan_id = planId[0];
+                    }
+                    if (!tasks.isEmpty()) {
+                        studyPlanTaskDao.insertAll(tasks);
+                    }
+                });
+                mainHandler.post(() -> callback.onSuccess(planId[0]));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void updateStudyPlanTask(long taskId, boolean completed, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int result = studyPlanTaskDao.updateCompleted(taskId, completed);
+                mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
             }

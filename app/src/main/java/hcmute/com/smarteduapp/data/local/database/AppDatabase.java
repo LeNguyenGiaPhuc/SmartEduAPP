@@ -14,6 +14,8 @@ import hcmute.com.smarteduapp.data.local.dao.StudyDocumentDao;
 import hcmute.com.smarteduapp.data.local.dao.StudyDocumentAttachmentDao;
 import hcmute.com.smarteduapp.data.local.dao.StudyQuestionDao;
 import hcmute.com.smarteduapp.data.local.dao.StudySummaryDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyPlanDao;
+import hcmute.com.smarteduapp.data.local.dao.StudyPlanTaskDao;
 import hcmute.com.smarteduapp.data.local.dao.SubjectDao;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
@@ -22,11 +24,14 @@ import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.data.local.entity.Subject;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlan;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlanTask;
 
 @Database(
         entities = {Subject.class, StudyDocument.class, StudyDocumentAttachment.class, StudySummary.class,
-                StudyQuestion.class, QuizAttempt.class, QuizAttemptAnswer.class},
-        version = 6,
+                StudyQuestion.class, QuizAttempt.class, QuizAttemptAnswer.class,
+                StudyPlan.class, StudyPlanTask.class},
+        version = 7,
         exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -120,6 +125,34 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    private static final Migration MIGRATION_6_7 = new Migration(6, 7) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS study_plans (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "document_id INTEGER NOT NULL, " +
+                    "attempt_id INTEGER NOT NULL, " +
+                    "title TEXT NOT NULL, " +
+                    "overview TEXT NOT NULL, " +
+                    "createdAt INTEGER NOT NULL, " +
+                    "FOREIGN KEY(document_id) REFERENCES documents(id) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                    "FOREIGN KEY(attempt_id) REFERENCES quiz_attempts(id) ON UPDATE NO ACTION ON DELETE CASCADE" +
+                    ")");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_study_plans_document_id ON study_plans(document_id)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_study_plans_attempt_id ON study_plans(attempt_id)");
+            database.execSQL("CREATE TABLE IF NOT EXISTS study_plan_tasks (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "plan_id INTEGER NOT NULL, " +
+                    "taskOrder INTEGER NOT NULL, " +
+                    "title TEXT NOT NULL, " +
+                    "description TEXT NOT NULL, " +
+                    "completed INTEGER NOT NULL, " +
+                    "FOREIGN KEY(plan_id) REFERENCES study_plans(id) ON UPDATE NO ACTION ON DELETE CASCADE" +
+                    ")");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_study_plan_tasks_plan_id ON study_plan_tasks(plan_id)");
+        }
+    };
+
     public abstract SubjectDao subjectDao();
     public abstract StudyDocumentDao studyDocumentDao();
     public abstract StudyDocumentAttachmentDao studyDocumentAttachmentDao();
@@ -127,6 +160,8 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract StudyQuestionDao studyQuestionDao();
     public abstract QuizAttemptDao quizAttemptDao();
     public abstract QuizAttemptAnswerDao quizAttemptAnswerDao();
+    public abstract StudyPlanDao studyPlanDao();
+    public abstract StudyPlanTaskDao studyPlanTaskDao();
 
     public static AppDatabase getInstance(Context context) {
         if (instance == null) {
@@ -138,7 +173,7 @@ public abstract class AppDatabase extends RoomDatabase {
                             "smartedu.db"
                     )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .build();
                 }
             }

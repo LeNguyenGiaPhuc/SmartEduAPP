@@ -56,6 +56,8 @@ import hcmute.com.smarteduapp.service.study.QuizParser;
 import hcmute.com.smarteduapp.service.study.QuizScoringService;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlan;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlanTask;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -91,6 +93,8 @@ public class MainActivity extends AppCompatActivity {
     final Map<Long, Integer> quizAnswerChangeCounts = new HashMap<>();
     final LinkedHashMap<Long, Subject> recentSubjects = new LinkedHashMap<>();
     QuizAttempt latestQuizAttempt;
+    StudyPlan currentStudyPlan;
+    List<StudyPlanTask> currentStudyPlanTasks = new ArrayList<>();
     StudySummary latestDisplayedSummary;
     boolean documentOpenedFromHistory;
     boolean quizResultOpenedFromHome;

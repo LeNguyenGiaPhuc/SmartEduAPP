@@ -7,6 +7,7 @@ import android.os.SystemClock;
 import android.text.InputType;
 import android.widget.EditText;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -25,6 +26,8 @@ import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
 import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlan;
+import hcmute.com.smarteduapp.data.local.entity.StudyPlanTask;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
 import hcmute.com.smarteduapp.service.ai.GeminiService;
 import hcmute.com.smarteduapp.ui.common.SimpleCardAdapter;
@@ -1050,6 +1053,7 @@ class StudyController {
         activity.setContentView(R.layout.screen_quiz_analysis);
         activity.applySystemBars();
         activity.bindClick(R.id.backQuizAnalysis, this::showQuizResult);
+        activity.bindClick(R.id.buttonCreateStudyPlan, this::createOrOpenStudyPlan);
         renderQuizAnalysis();
     }
 
@@ -1133,6 +1137,282 @@ class StudyController {
 
         container.setAdapter(adapter);
         adapter.submit(cards);
+    }
+
+
+    private void createOrOpenStudyPlan() {
+        QuizAttempt attempt = activity.latestQuizAttempt;
+        if (attempt == null || activity.selectedDocument == null) {
+            Toast.makeText(activity, "Chưa có dữ liệu quiz để tạo kế hoạch", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        activity.studyRepository.getStudyPlan(attempt.id, new RepositoryCallback<StudyPlan>() {
+            @Override
+            public void onSuccess(StudyPlan existingPlan) {
+                if (existingPlan != null) {
+                    loadStudyPlan(existingPlan);
+                    return;
+                }
+
+                StudyPlan plan = new StudyPlan(
+                        attempt.document_id,
+                        attempt.id,
+                        "Kế hoạch cải thiện: " + activity.selectedDocument.title,
+                        buildStudyPlanOverview(attempt),
+                        System.currentTimeMillis()
+                );
+                List<StudyPlanTask> tasks = buildStudyPlanTasks(plan, attempt);
+                activity.studyRepository.createStudyPlanWithTasks(
+                        plan,
+                        tasks,
+                        new RepositoryCallback<Long>() {
+                            @Override
+                            public void onSuccess(Long planId) {
+                                plan.id = planId;
+                                loadStudyPlan(plan);
+                            }
+
+                            @Override
+                            public void onError(Exception exception) {
+                                Toast.makeText(activity, "Không thể lưu kế hoạch học", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                );
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(activity, "Không thể kiểm tra kế hoạch học", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+
+    private void loadStudyPlan(StudyPlan plan) {
+        activity.currentStudyPlan = plan;
+        activity.studyRepository.getStudyPlanTasks(plan.id, new RepositoryCallback<List<StudyPlanTask>>() {
+            @Override
+            public void onSuccess(List<StudyPlanTask> tasks) {
+                activity.currentStudyPlanTasks = tasks;
+                showStudyPlan();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(activity, "Không thể tải nhiệm vụ học", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+
+    private String buildStudyPlanOverview(QuizAttempt attempt) {
+        int questionCount = activity.currentQuizQuestions.size();
+        int wrongCount = Math.max(0, attempt.wrongCount);
+        int averageSeconds = questionCount == 0 ? 0 : attempt.totalTimeSeconds / questionCount;
+        StringBuilder overview = new StringBuilder();
+        overview.append("Kế hoạch được tạo từ ")
+                .append(wrongCount)
+                .append(" câu sai, thời gian trung bình ")
+                .append(formatSeconds(averageSeconds));
+        if (attempt.focusModeEnabled && attempt.focusExitCount > 0) {
+            overview.append(" và ").append(attempt.focusExitCount).append(" lần rời app");
+        }
+        return overview.toString();
+    }
+
+
+    private List<StudyPlanTask> buildStudyPlanTasks(StudyPlan plan, QuizAttempt attempt) {
+        List<StudyPlanTask> tasks = new ArrayList<>();
+        int order = 1;
+        int questionCount = activity.currentQuizQuestions.size();
+        int averageSeconds = questionCount == 0 ? 0 : attempt.totalTimeSeconds / questionCount;
+
+        tasks.add(new StudyPlanTask(
+                0,
+                order++,
+                "Đọc lại tài liệu",
+                "Xem lại nội dung của tài liệu trước khi làm lại quiz.",
+                false
+        ));
+
+        if (attempt.wrongCount > 0) {
+            String description = attempt.explanationUnlocked
+                    ? "Xem lại các câu sai và đọc đáp án đúng, giải thích tương ứng."
+                    : "Đọc lại tài liệu vì phần đáp án và giải thích đang bị khóa do rời app trong chế độ tập trung.";
+            tasks.add(new StudyPlanTask(0, order++, "Ôn các câu trả lời sai", description, false));
+        }
+
+        StudyQuestion longestQuestion = findLongestQuestion();
+        if (longestQuestion != null && getQuestionSeconds(longestQuestion.id) > Math.max(10, averageSeconds * 3 / 2)) {
+            tasks.add(new StudyPlanTask(
+                    0,
+                    order++,
+                    "Ôn câu làm lâu nhất",
+                    "Tập trung vào câu " + longestQuestion.questionOrder
+                            + " vì thời gian làm cao hơn mức trung bình.",
+                    false
+            ));
+        }
+
+        StudyQuestion changedQuestion = findMostChangedQuestion();
+        if (changedQuestion != null && activity.quizAnswerChangeCounts.getOrDefault(changedQuestion.id, 0) > 0) {
+            tasks.add(new StudyPlanTask(
+                    0,
+                    order++,
+                    "Ôn câu chưa chắc đáp án",
+                    "Xem lại câu " + changedQuestion.questionOrder
+                            + " vì bạn đã đổi đáp án nhiều lần.",
+                    false
+            ));
+        }
+
+        if (attempt.focusModeEnabled && attempt.focusExitCount > 0) {
+            tasks.add(new StudyPlanTask(
+                    0,
+                    order++,
+                    "Làm lại quiz trong chế độ tập trung",
+                    "Tắt thông báo và hoàn thành quiz mà không rời ứng dụng.",
+                    false
+            ));
+        }
+
+        tasks.add(new StudyPlanTask(
+                0,
+                order,
+                "Làm lại quiz để kiểm tra tiến bộ",
+                "Làm lại quiz sau khi ôn tập và so sánh số câu đúng với lần trước.",
+                false
+        ));
+        return tasks;
+    }
+
+
+    void showStudyPlan() {
+        activity.currentScreen = R.layout.screen_study_plan;
+        activity.setContentView(R.layout.screen_study_plan);
+        activity.applySystemBars();
+        activity.bindClick(R.id.backStudyPlan, this::showQuizAnalysis);
+        renderStudyPlan();
+    }
+
+
+    private void renderStudyPlan() {
+        TextView overview = activity.findViewById(R.id.studyPlanOverview);
+        TextView progress = activity.findViewById(R.id.studyPlanProgress);
+        RecyclerView container = activity.findViewById(R.id.studyPlanTasks);
+        UiViewFactory.setupVerticalRecycler(container);
+
+        if (activity.currentStudyPlan == null) {
+            overview.setText("Chưa có kế hoạch học.");
+            progress.setText("0/0 nhiệm vụ hoàn thành");
+            container.setAdapter(new SimpleCardAdapter());
+            return;
+        }
+
+        overview.setText(activity.currentStudyPlan.overview);
+        updateStudyPlanProgress(progress);
+
+        SimpleCardAdapter adapter = new SimpleCardAdapter();
+        List<SimpleCardAdapter.CardFactory> cards = new ArrayList<>();
+        for (StudyPlanTask task : activity.currentStudyPlanTasks) {
+            cards.add((parent, position) -> createStudyPlanTaskCard(task, progress, position));
+        }
+        container.setAdapter(adapter);
+        adapter.submit(cards);
+    }
+
+
+    private void updateStudyPlanProgress(TextView progress) {
+        int completed = 0;
+        for (StudyPlanTask task : activity.currentStudyPlanTasks) {
+            if (task.completed) {
+                completed++;
+            }
+        }
+        progress.setText(completed + "/" + activity.currentStudyPlanTasks.size() + " nhiệm vụ hoàn thành");
+    }
+
+
+    private MaterialCardView createStudyPlanTaskCard(StudyPlanTask task, TextView progress, int index) {
+        MaterialCardView card = UiViewFactory.createCard(activity);
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(
+                UiViewFactory.dp(activity, 14),
+                UiViewFactory.dp(activity, 10),
+                UiViewFactory.dp(activity, 14),
+                UiViewFactory.dp(activity, 10)
+        );
+
+        CheckBox checkBox = new CheckBox(activity);
+        checkBox.setText(task.taskOrder + ". " + task.title);
+        checkBox.setTextSize(16);
+        checkBox.setTextColor(activity.getColor(R.color.ink));
+        checkBox.setTypeface(null, android.graphics.Typeface.BOLD);
+        checkBox.setChecked(task.completed);
+        checkBox.setOnCheckedChangeListener((button, checked) -> {
+            if (task.completed == checked) {
+                return;
+            }
+            boolean oldValue = task.completed;
+            task.completed = checked;
+            updateStudyPlanProgress(progress);
+            activity.studyRepository.updateStudyPlanTask(task.id, checked, new RepositoryCallback<Integer>() {
+                @Override
+                public void onSuccess(Integer result) {
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    task.completed = oldValue;
+                    button.setChecked(oldValue);
+                    updateStudyPlanProgress(progress);
+                    Toast.makeText(activity, "Không thể cập nhật nhiệm vụ", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        TextView description = UiViewFactory.createText(activity, task.description, 14, R.color.ink_muted, false);
+        description.setPadding(
+                UiViewFactory.dp(activity, 8),
+                0,
+                UiViewFactory.dp(activity, 8),
+                0
+        );
+        content.addView(checkBox);
+        content.addView(description);
+        card.addView(content);
+        UiViewFactory.animateIn(card, index);
+        return card;
+    }
+
+
+    private StudyQuestion findLongestQuestion() {
+        StudyQuestion result = null;
+        int longest = -1;
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            int seconds = getQuestionSeconds(question.id);
+            if (seconds > longest) {
+                longest = seconds;
+                result = question;
+            }
+        }
+        return result;
+    }
+
+
+    private StudyQuestion findMostChangedQuestion() {
+        StudyQuestion result = null;
+        int mostChanged = -1;
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            int changes = activity.quizAnswerChangeCounts.getOrDefault(question.id, 0);
+            if (changes > mostChanged) {
+                mostChanged = changes;
+                result = question;
+            }
+        }
+        return result;
     }
 
 

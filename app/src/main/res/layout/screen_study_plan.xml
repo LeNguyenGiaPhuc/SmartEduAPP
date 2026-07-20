@@ -17,7 +17,7 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/backQuizAnalysis"
+            android:id="@+id/backStudyPlan"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/bg_pill"
@@ -33,45 +33,41 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:text="Phân tích quiz"
+            android:text="Kế hoạch học cải thiện"
             android:textColor="@color/ink"
             android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <TextView
-        android:id="@+id/analysisSummary"
+        android:id="@+id/studyPlanOverview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="18dp"
         android:background="@drawable/bg_badge_blue"
         android:paddingStart="14dp"
-        android:paddingTop="10dp"
+        android:paddingTop="11dp"
         android:paddingEnd="14dp"
-        android:paddingBottom="10dp"
-        android:text="Tổng quan"
+        android:paddingBottom="11dp"
+        android:text="Kế hoạch được tạo từ kết quả quiz"
         android:textColor="@color/brand_blue_dark"
         android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/buttonCreateStudyPlan"
+        android:id="@+id/studyPlanProgress"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:background="@drawable/bg_button_blue"
-        android:clickable="true"
-        android:focusable="true"
-        android:gravity="center"
-        android:text="Tạo kế hoạch học cải thiện"
-        android:textColor="@android:color/white"
-        android:textStyle="bold" />
+        android:text="0/0 nhiệm vụ hoàn thành"
+        android:textColor="@color/ink_muted"
+        android:textSize="14sp" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/analysisContainer"
+        android:id="@+id/studyPlanTasks"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="4dp"
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
