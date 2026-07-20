@@ -28,6 +28,7 @@ public class QuizAttempt {
     public boolean focusModeEnabled;
     public int focusExitCount;
     public boolean explanationUnlocked;
+    public int totalTimeSeconds;
 
     @Ignore
     public QuizAttempt(long document_id, float score, int correctCount, int wrongCount,
@@ -40,11 +41,12 @@ public class QuizAttempt {
         this.focusModeEnabled = false;
         this.focusExitCount = 0;
         this.explanationUnlocked = true;
+        this.totalTimeSeconds = 0;
     }
 
     public QuizAttempt(long document_id, float score, int correctCount, int wrongCount,
                        long completedAt, boolean focusModeEnabled, int focusExitCount,
-                       boolean explanationUnlocked) {
+                       boolean explanationUnlocked, int totalTimeSeconds) {
         this.document_id = document_id;
         this.score = score;
         this.correctCount = correctCount;
@@ -53,5 +55,6 @@ public class QuizAttempt {
         this.focusModeEnabled = focusModeEnabled;
         this.focusExitCount = focusExitCount;
         this.explanationUnlocked = explanationUnlocked;
+        this.totalTimeSeconds = totalTimeSeconds;
     }
 }

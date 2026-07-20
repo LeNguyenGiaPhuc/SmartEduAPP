@@ -46,13 +46,16 @@ public class QuizAttemptAnswer {
     public String explanation;
     public boolean correct;
     public long createdAt;
+    public int timeSpentSeconds;
+    public int answerChangeCount;
 
     public QuizAttemptAnswer(long attempt_id, long document_id, long question_id, int questionOrder,
                              @NonNull String questionText, @NonNull String optionA,
                              @NonNull String optionB, @NonNull String optionC,
                              @NonNull String optionD, @NonNull String correctOption,
                              @NonNull String selectedOption, String explanation,
-                             boolean correct, long createdAt) {
+                             boolean correct, long createdAt, int timeSpentSeconds,
+                             int answerChangeCount) {
         this.attempt_id = attempt_id;
         this.document_id = document_id;
         this.question_id = question_id;
@@ -67,5 +70,7 @@ public class QuizAttemptAnswer {
         this.explanation = explanation;
         this.correct = correct;
         this.createdAt = createdAt;
+        this.timeSpentSeconds = timeSpentSeconds;
+        this.answerChangeCount = answerChangeCount;
     }
 }

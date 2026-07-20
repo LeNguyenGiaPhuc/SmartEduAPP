@@ -360,9 +360,13 @@ class HistoryController {
                         activity.latestQuizAttempt = attempt;
                         activity.currentQuizQuestions = convertAnswersToQuestions(answers);
                         activity.selectedQuizAnswers.clear();
+                        activity.quizQuestionTimeMillis.clear();
+                        activity.quizAnswerChangeCounts.clear();
                         for (QuizAttemptAnswer answer : answers) {
                             long questionId = answer.question_id > 0 ? answer.question_id : answer.id;
                             activity.selectedQuizAnswers.put(questionId, answer.selectedOption);
+                            activity.quizQuestionTimeMillis.put(questionId, answer.timeSpentSeconds * 1000L);
+                            activity.quizAnswerChangeCounts.put(questionId, answer.answerChangeCount);
                         }
                         activity.showQuizResult();
                     }

@@ -29,6 +29,10 @@ import hcmute.com.smarteduapp.ui.common.UiViewFactory;
  * Quiz scoring and database work stay outside this class.
  */
 public class QuizUiRenderer {
+    public interface AnswerSelectionListener {
+        void onAnswerSelected(StudyQuestion question, String previousOption, String newOption);
+    }
+
     private final Activity activity;
 
     public QuizUiRenderer(Activity activity) {
@@ -76,6 +80,15 @@ public class QuizUiRenderer {
             Map<Long, String> selectedAnswers,
             int currentIndex
     ) {
+        renderSingleQuestion(questions, selectedAnswers, currentIndex, null);
+    }
+
+    public void renderSingleQuestion(
+            List<StudyQuestion> questions,
+            Map<Long, String> selectedAnswers,
+            int currentIndex,
+            AnswerSelectionListener listener
+    ) {
         TextView subtitle = activity.findViewById(R.id.quizSubtitle);
         TextView previousButton = activity.findViewById(R.id.buttonPreviousQuestion);
         TextView nextButton = activity.findViewById(R.id.buttonCheckAnswers);
@@ -102,7 +115,8 @@ public class QuizUiRenderer {
                 question,
                 safeIndex,
                 questions.size(),
-                selectedAnswers
+                selectedAnswers,
+                listener
         ));
         container.setAdapter(adapter);
         adapter.submit(cards);
@@ -130,7 +144,8 @@ public class QuizUiRenderer {
         scoreText.setText(String.format(Locale.US, "%.1f", latestQuizAttempt.score));
         correctText.setText(latestQuizAttempt.correctCount + " / " + total + " câu trả lời đúng");
         detailText.setText((selectedDocument == null ? "Tài liệu" : selectedDocument.title)
-                + " · Sai " + latestQuizAttempt.wrongCount + " câu");
+                + " · Sai " + latestQuizAttempt.wrongCount + " câu"
+                + " · Thời gian " + formatSeconds(latestQuizAttempt.totalTimeSeconds));
         if (!latestQuizAttempt.explanationUnlocked) {
             renderLockedQuizReview(latestQuizAttempt);
             return;
@@ -145,6 +160,17 @@ public class QuizUiRenderer {
             int index,
             int total,
             Map<Long, String> selectedAnswers
+    ) {
+        return createQuizQuestionCard(parent, question, index, total, selectedAnswers, null);
+    }
+
+    private View createQuizQuestionCard(
+            ViewGroup parent,
+            StudyQuestion question,
+            int index,
+            int total,
+            Map<Long, String> selectedAnswers,
+            AnswerSelectionListener listener
     ) {
         MaterialCardView card = UiViewFactory.createCard(parent.getContext());
         card.setClickable(false);
@@ -204,7 +230,12 @@ public class QuizUiRenderer {
         answers.setOnCheckedChangeListener((group, checkedId) -> {
             RadioButton selected = group.findViewById(checkedId);
             if (selected != null) {
-                selectedAnswers.put(question.id, selected.getTag().toString());
+                String newOption = selected.getTag().toString();
+                String previousOption = selectedAnswers.get(question.id);
+                if (listener != null) {
+                    listener.onAnswerSelected(question, previousOption, newOption);
+                }
+                selectedAnswers.put(question.id, newOption);
             }
         });
 
@@ -418,6 +449,13 @@ public class QuizUiRenderer {
         if (normalized.startsWith("C")) return question.optionC;
         if (normalized.startsWith("D")) return question.optionD;
         return "";
+    }
+
+    private String formatSeconds(int totalSeconds) {
+        int safeSeconds = Math.max(0, totalSeconds);
+        int minutes = safeSeconds / 60;
+        int seconds = safeSeconds % 60;
+        return String.format(Locale.US, "%02d:%02d", minutes, seconds);
     }
 
     private boolean isBlank(String value) {

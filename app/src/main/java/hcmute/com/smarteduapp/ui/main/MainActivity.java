@@ -87,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
     List<StudyQuestion> currentQuizQuestions = new ArrayList<>();
     int currentQuizQuestionIndex;
     final Map<Long, String> selectedQuizAnswers = new HashMap<>();
+    final Map<Long, Long> quizQuestionTimeMillis = new HashMap<>();
+    final Map<Long, Integer> quizAnswerChangeCounts = new HashMap<>();
     final LinkedHashMap<Long, Subject> recentSubjects = new LinkedHashMap<>();
     QuizAttempt latestQuizAttempt;
     StudySummary latestDisplayedSummary;
@@ -153,12 +155,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        if (studyController != null) {
+            studyController.resumeQuizTimingAfterForeground();
+        }
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
         // onPause() can be triggered by short-lived system UI. onStop() is a
         // better approximation of the user really leaving the app.
         if (isChangingConfigurations()) {
             return;
+        }
+        if (studyController != null) {
+            studyController.pauseQuizTimingForBackground();
         }
         if (isFocusQuizInProgress() && !focusQuizSubmitting) {
             focusQuizExitCount++;

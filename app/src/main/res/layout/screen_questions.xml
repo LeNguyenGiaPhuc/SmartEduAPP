@@ -55,6 +55,21 @@
         android:textSize="13sp"
         android:textStyle="bold" />
 
+    <TextView
+        android:id="@+id/quizCurrentTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_badge_blue"
+        android:paddingStart="12dp"
+        android:paddingTop="7dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="7dp"
+        android:text="Thời gian câu hiện tại: 00:00"
+        android:textColor="@color/brand_blue_dark"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/quizQuestionsContainer"
         android:layout_width="match_parent"

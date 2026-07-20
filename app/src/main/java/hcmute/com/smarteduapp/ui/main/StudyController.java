@@ -1,6 +1,9 @@
 package hcmute.com.smarteduapp.ui.main;
 
 import android.view.View;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.widget.EditText;
 import android.widget.ArrayAdapter;
@@ -10,6 +13,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +27,7 @@ import hcmute.com.smarteduapp.data.local.entity.StudyQuestion;
 import hcmute.com.smarteduapp.data.local.entity.StudySummary;
 import hcmute.com.smarteduapp.data.repository.RepositoryCallback;
 import hcmute.com.smarteduapp.service.ai.GeminiService;
+import hcmute.com.smarteduapp.ui.common.SimpleCardAdapter;
 import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 
 /**
@@ -28,6 +35,11 @@ import hcmute.com.smarteduapp.ui.common.UiViewFactory;
  */
 class StudyController {
     private final MainActivity activity;
+    private final Handler quizTimerHandler = new Handler(Looper.getMainLooper());
+    private Runnable quizTimerRunnable;
+    private long activeQuestionId = -1L;
+    private long activeQuestionStartedAt = 0L;
+    private boolean questionTimerRunning;
     private boolean mistakeReviewMode;
 
     StudyController(MainActivity activity) {
@@ -684,7 +696,150 @@ class StudyController {
     }
 
 
+    void pauseQuizTimingForBackground() {
+        pauseCurrentQuestionTimer();
+    }
+
+
+    void resumeQuizTimingAfterForeground() {
+        if (activity.currentScreen == R.layout.screen_questions
+                && !activity.focusQuizSubmitting
+                && activeQuestionId > 0
+                && !questionTimerRunning) {
+            activeQuestionStartedAt = SystemClock.elapsedRealtime();
+            questionTimerRunning = true;
+            scheduleQuestionTimer();
+        }
+    }
+
+
+    private void startNewQuizAttemptTracking() {
+        stopQuestionTimerRunnable();
+        activeQuestionId = -1L;
+        activeQuestionStartedAt = 0L;
+        questionTimerRunning = false;
+        activity.quizQuestionTimeMillis.clear();
+        activity.quizAnswerChangeCounts.clear();
+    }
+
+
+    private void startCurrentQuestionTimer() {
+        if (activity.currentQuizQuestions.isEmpty()) {
+            updateCurrentQuestionTimeLabel();
+            return;
+        }
+        int safeIndex = Math.max(0, Math.min(
+                activity.currentQuizQuestionIndex,
+                activity.currentQuizQuestions.size() - 1
+        ));
+        StudyQuestion question = activity.currentQuizQuestions.get(safeIndex);
+        activeQuestionId = question.id;
+        activeQuestionStartedAt = SystemClock.elapsedRealtime();
+        questionTimerRunning = true;
+        scheduleQuestionTimer();
+        updateCurrentQuestionTimeLabel();
+    }
+
+
+    private void pauseCurrentQuestionTimer() {
+        stopQuestionTimerRunnable();
+        if (activeQuestionId > 0 && questionTimerRunning) {
+            long elapsed = Math.max(0L, SystemClock.elapsedRealtime() - activeQuestionStartedAt);
+            long saved = activity.quizQuestionTimeMillis.getOrDefault(activeQuestionId, 0L);
+            activity.quizQuestionTimeMillis.put(activeQuestionId, saved + elapsed);
+        }
+        questionTimerRunning = false;
+        updateCurrentQuestionTimeLabel();
+    }
+
+
+    private void scheduleQuestionTimer() {
+        stopQuestionTimerRunnable();
+        quizTimerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                updateCurrentQuestionTimeLabel();
+                quizTimerHandler.postDelayed(this, 1000);
+            }
+        };
+        quizTimerRunnable.run();
+    }
+
+
+    private void stopQuestionTimerRunnable() {
+        if (quizTimerRunnable != null) {
+            quizTimerHandler.removeCallbacks(quizTimerRunnable);
+            quizTimerRunnable = null;
+        }
+    }
+
+
+    private void updateCurrentQuestionTimeLabel() {
+        TextView currentTime = activity.findViewById(R.id.quizCurrentTime);
+        if (currentTime == null) {
+            return;
+        }
+        if (activity.currentQuizQuestions.isEmpty() || activeQuestionId <= 0) {
+            currentTime.setText("Thời gian câu hiện tại: 00:00");
+            return;
+        }
+        currentTime.setText("Thời gian câu hiện tại: " + formatSeconds(getCurrentQuestionSeconds()));
+    }
+
+
+    private int getCurrentQuestionSeconds() {
+        if (activeQuestionId <= 0) {
+            return 0;
+        }
+        long total = activity.quizQuestionTimeMillis.getOrDefault(activeQuestionId, 0L);
+        if (questionTimerRunning) {
+            total += Math.max(0L, SystemClock.elapsedRealtime() - activeQuestionStartedAt);
+        }
+        return millisToSeconds(total);
+    }
+
+
+    private int getQuestionSeconds(long questionId) {
+        long millis = activity.quizQuestionTimeMillis.getOrDefault(questionId, 0L);
+        return millisToSeconds(millis);
+    }
+
+
+    private int calculateTotalQuestionSeconds() {
+        int total = 0;
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            total += getQuestionSeconds(question.id);
+        }
+        return total;
+    }
+
+
+    private int millisToSeconds(long millis) {
+        return (int) Math.max(0L, (millis + 999L) / 1000L);
+    }
+
+
+    private String formatSeconds(int totalSeconds) {
+        int safeSeconds = Math.max(0, totalSeconds);
+        int minutes = safeSeconds / 60;
+        int seconds = safeSeconds % 60;
+        return String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds);
+    }
+
+
+    private void handleAnswerSelected(StudyQuestion question, String previousOption, String newOption) {
+        if (question == null || activity.isBlank(newOption)) {
+            return;
+        }
+        if (!activity.isBlank(previousOption) && !previousOption.equalsIgnoreCase(newOption)) {
+            int current = activity.quizAnswerChangeCounts.getOrDefault(question.id, 0);
+            activity.quizAnswerChangeCounts.put(question.id, current + 1);
+        }
+    }
+
+
     private void openQuestions(boolean reloadFromDatabase) {
+        startNewQuizAttemptTracking();
         activity.currentScreen = R.layout.screen_questions;
         activity.setContentView(R.layout.screen_questions);
         activity.applySystemBars();
@@ -701,6 +856,7 @@ class StudyController {
         title.setText((mistakeReviewMode ? "Ôn câu sai: " : "Quiz: ") + activity.selectedDocument.title);
         activity.currentQuizQuestionIndex = 0;
         renderQuizQuestions(activity.currentQuizQuestions);
+        startCurrentQuestionTimer();
     }
 
 
@@ -715,6 +871,7 @@ class StudyController {
         }
 
         activity.resetFocusQuizSession();
+        pauseCurrentQuestionTimer();
         activity.showProcessDocument();
     }
 
@@ -736,6 +893,7 @@ class StudyController {
                         activity.currentQuizQuestionIndex = 0;
                         activity.selectedQuizAnswers.clear();
                         renderQuizQuestions(questions);
+                        startCurrentQuestionTimer();
                     }
 
                     @Override
@@ -751,7 +909,8 @@ class StudyController {
         activity.quizUiRenderer.renderSingleQuestion(
                 questions,
                 activity.selectedQuizAnswers,
-                activity.currentQuizQuestionIndex
+                activity.currentQuizQuestionIndex,
+                this::handleAnswerSelected
         );
     }
 
@@ -761,8 +920,10 @@ class StudyController {
             return;
         }
 
+        pauseCurrentQuestionTimer();
         activity.currentQuizQuestionIndex--;
         renderQuizQuestions(activity.currentQuizQuestions);
+        startCurrentQuestionTimer();
     }
 
 
@@ -773,8 +934,10 @@ class StudyController {
 
         if (activity.currentQuizQuestionIndex
                 < activity.currentQuizQuestions.size() - 1) {
+            pauseCurrentQuestionTimer();
             activity.currentQuizQuestionIndex++;
             renderQuizQuestions(activity.currentQuizQuestions);
+            startCurrentQuestionTimer();
             return;
         }
 
@@ -798,6 +961,7 @@ class StudyController {
             return;
         }
 
+        pauseCurrentQuestionTimer();
         QuizAttempt attempt = activity.quizScoringService.score(
                 activity.selectedDocument.id,
                 activity.currentQuizQuestions,
@@ -806,6 +970,7 @@ class StudyController {
         attempt.focusModeEnabled = activity.focusQuizModeEnabled;
         attempt.focusExitCount = activity.focusQuizExitCount;
         attempt.explanationUnlocked = activity.shouldUnlockQuizExplanation();
+        attempt.totalTimeSeconds = calculateTotalQuestionSeconds();
 
         List<QuizAttemptAnswer> answers = buildAttemptAnswers(attempt);
 
@@ -842,6 +1007,8 @@ class StudyController {
             if (selectedOption == null) {
                 selectedOption = "";
             }
+            int timeSpentSeconds = getQuestionSeconds(question.id);
+            int answerChangeCount = activity.quizAnswerChangeCounts.getOrDefault(question.id, 0);
 
             answers.add(new QuizAttemptAnswer(
                     0,
@@ -857,7 +1024,9 @@ class StudyController {
                     selectedOption,
                     question.explanation,
                     selectedOption.equalsIgnoreCase(question.correctOption),
-                    now
+                    now,
+                    timeSpentSeconds,
+                    answerChangeCount
             ));
         }
         return answers;
@@ -871,7 +1040,17 @@ class StudyController {
         activity.bindClick(R.id.backQuizResult, this::goBackFromQuizResult);
         activity.bindClick(R.id.buttonViewHistory, activity::showHistory);
         activity.bindClick(R.id.buttonRetryQuiz, () -> showFocusQuizModeDialog(false));
+        activity.bindClick(R.id.buttonAnalyzeQuiz, this::showQuizAnalysis);
         renderQuizResult();
+    }
+
+
+    void showQuizAnalysis() {
+        activity.currentScreen = R.layout.screen_quiz_analysis;
+        activity.setContentView(R.layout.screen_quiz_analysis);
+        activity.applySystemBars();
+        activity.bindClick(R.id.backQuizAnalysis, this::showQuizResult);
+        renderQuizAnalysis();
     }
 
 
@@ -898,6 +1077,146 @@ class StudyController {
                 activity.currentQuizQuestions,
                 activity.selectedQuizAnswers
         );
+    }
+
+
+    private void renderQuizAnalysis() {
+        TextView summary = activity.findViewById(R.id.analysisSummary);
+        RecyclerView container = activity.findViewById(R.id.analysisContainer);
+        UiViewFactory.setupVerticalRecycler(container);
+
+        QuizAttempt attempt = activity.latestQuizAttempt;
+        int questionCount = activity.currentQuizQuestions.size();
+        int totalSeconds = attempt == null ? calculateTotalQuestionSeconds() : attempt.totalTimeSeconds;
+        int averageSeconds = questionCount == 0 ? 0 : totalSeconds / Math.max(1, questionCount);
+        int focusExits = attempt == null ? activity.focusQuizExitCount : attempt.focusExitCount;
+
+        summary.setText(
+                "Tổng thời gian: " + formatSeconds(totalSeconds)
+                        + " · Trung bình: " + formatSeconds(averageSeconds)
+                        + " · Số câu: " + questionCount
+                        + " · Thoát app: " + focusExits
+        );
+
+        SimpleCardAdapter adapter = new SimpleCardAdapter();
+        List<SimpleCardAdapter.CardFactory> cards = new ArrayList<>();
+
+        cards.add((parent, position) -> createAnalysisCard(
+                "Câu làm lâu nhất",
+                buildLongestQuestionText(),
+                position
+        ));
+        cards.add((parent, position) -> createAnalysisCard(
+                "Câu đổi đáp án nhiều nhất",
+                buildMostChangedQuestionText(),
+                position
+        ));
+        cards.add((parent, position) -> createAnalysisCard(
+                "Danh sách câu trả lời sai",
+                attempt != null && !attempt.explanationUnlocked
+                        ? "Danh sách câu sai đang bị khóa vì bạn đã rời app trong chế độ tập trung."
+                        : buildWrongAnswerText(),
+                position
+        ));
+        cards.add((parent, position) -> createAnalysisCard(
+                "Thời gian trung bình mỗi câu",
+                formatSeconds(averageSeconds),
+                position
+        ));
+        cards.add((parent, position) -> createAnalysisCard(
+                "Số lần thoát app",
+                (attempt != null && attempt.focusModeEnabled)
+                        ? focusExits + " lần trong chế độ tập trung"
+                        : "Không bật chế độ tập trung",
+                position
+        ));
+
+        container.setAdapter(adapter);
+        adapter.submit(cards);
+    }
+
+
+    private MaterialCardView createAnalysisCard(String titleText, String bodyText, int index) {
+        MaterialCardView card = UiViewFactory.createCard(activity);
+        card.setClickable(false);
+        card.setFocusable(false);
+
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(
+                UiViewFactory.dp(activity, 16),
+                UiViewFactory.dp(activity, 14),
+                UiViewFactory.dp(activity, 16),
+                UiViewFactory.dp(activity, 14)
+        );
+
+        TextView title = UiViewFactory.createText(activity, titleText, 16, R.color.ink, true);
+        TextView body = UiViewFactory.createText(activity, bodyText, 14, R.color.ink_muted, false);
+        body.setPadding(0, UiViewFactory.dp(activity, 8), 0, 0);
+
+        content.addView(title);
+        content.addView(body);
+        card.addView(content);
+        UiViewFactory.animateIn(card, index);
+        return card;
+    }
+
+
+    private String buildLongestQuestionText() {
+        StudyQuestion longestQuestion = null;
+        int longestSeconds = -1;
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            int seconds = getQuestionSeconds(question.id);
+            if (seconds > longestSeconds) {
+                longestSeconds = seconds;
+                longestQuestion = question;
+            }
+        }
+        if (longestQuestion == null) {
+            return "Chưa có dữ liệu thời gian.";
+        }
+        return "Câu " + longestQuestion.questionOrder + " · "
+                + formatSeconds(longestSeconds) + "\n" + longestQuestion.questionText;
+    }
+
+
+    private String buildMostChangedQuestionText() {
+        StudyQuestion mostChangedQuestion = null;
+        int mostChanges = -1;
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            int changes = activity.quizAnswerChangeCounts.getOrDefault(question.id, 0);
+            if (changes > mostChanges) {
+                mostChanges = changes;
+                mostChangedQuestion = question;
+            }
+        }
+        if (mostChangedQuestion == null || mostChanges <= 0) {
+            return "Không có câu nào bị đổi đáp án.";
+        }
+        return "Câu " + mostChangedQuestion.questionOrder + " · "
+                + mostChanges + " lần đổi đáp án\n" + mostChangedQuestion.questionText;
+    }
+
+
+    private String buildWrongAnswerText() {
+        StringBuilder builder = new StringBuilder();
+        for (StudyQuestion question : activity.currentQuizQuestions) {
+            String selected = activity.selectedQuizAnswers.get(question.id);
+            if (!question.correctOption.equalsIgnoreCase(selected == null ? "" : selected)) {
+                if (builder.length() > 0) {
+                    builder.append("\n\n");
+                }
+                builder.append("Câu ")
+                        .append(question.questionOrder)
+                        .append(": chọn ")
+                        .append(activity.isBlank(selected) ? "chưa chọn" : selected)
+                        .append(", đúng ")
+                        .append(question.correctOption)
+                        .append("\n")
+                        .append(question.questionText);
+            }
+        }
+        return builder.length() == 0 ? "Không có câu trả lời sai." : builder.toString();
     }
 
 

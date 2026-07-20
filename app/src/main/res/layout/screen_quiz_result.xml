@@ -119,6 +119,19 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/buttonAnalyzeQuiz"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="Phân tích"
+            android:textColor="@color/brand_blue_dark"
+            android:textStyle="bold" />
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"

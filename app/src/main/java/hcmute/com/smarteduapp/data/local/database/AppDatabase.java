@@ -26,7 +26,7 @@ import hcmute.com.smarteduapp.data.local.entity.Subject;
 @Database(
         entities = {Subject.class, StudyDocument.class, StudyDocumentAttachment.class, StudySummary.class,
                 StudyQuestion.class, QuizAttempt.class, QuizAttemptAnswer.class},
-        version = 5,
+        version = 6,
         exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -111,6 +111,15 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    private static final Migration MIGRATION_5_6 = new Migration(5, 6) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE quiz_attempts ADD COLUMN totalTimeSeconds INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE quiz_attempt_answers ADD COLUMN timeSpentSeconds INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE quiz_attempt_answers ADD COLUMN answerChangeCount INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
     public abstract SubjectDao subjectDao();
     public abstract StudyDocumentDao studyDocumentDao();
     public abstract StudyDocumentAttachmentDao studyDocumentAttachmentDao();
@@ -129,7 +138,7 @@ public abstract class AppDatabase extends RoomDatabase {
                             "smartedu.db"
                     )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
-                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                     .build();
                 }
             }
