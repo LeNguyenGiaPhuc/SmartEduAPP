@@ -44,6 +44,7 @@ class StudyController {
     private long activeQuestionStartedAt = 0L;
     private boolean questionTimerRunning;
     private boolean mistakeReviewMode;
+    private boolean studyPlanOpenedFromList;
 
     StudyController(MainActivity activity) {
         this.activity = activity;
@@ -1141,6 +1142,7 @@ class StudyController {
 
 
     private void createOrOpenStudyPlan() {
+        studyPlanOpenedFromList = false;
         QuizAttempt attempt = activity.latestQuizAttempt;
         if (attempt == null || activity.selectedDocument == null) {
             Toast.makeText(activity, "Chưa có dữ liệu quiz để tạo kế hoạch", Toast.LENGTH_SHORT).show();
@@ -1201,6 +1203,26 @@ class StudyController {
             @Override
             public void onError(Exception exception) {
                 Toast.makeText(activity, "Không thể tải nhiệm vụ học", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    void openStudyPlanFromList(long planId) {
+        studyPlanOpenedFromList = true;
+        activity.studyRepository.getStudyPlanById(planId, new RepositoryCallback<StudyPlan>() {
+            @Override
+            public void onSuccess(StudyPlan plan) {
+                if (plan == null) {
+                    Toast.makeText(activity, "Kế hoạch không còn tồn tại", Toast.LENGTH_SHORT).show();
+                    activity.showStudyPlanList();
+                    return;
+                }
+                loadStudyPlan(plan);
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Toast.makeText(activity, "Không thể mở kế hoạch học", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -1292,7 +1314,10 @@ class StudyController {
         activity.currentScreen = R.layout.screen_study_plan;
         activity.setContentView(R.layout.screen_study_plan);
         activity.applySystemBars();
-        activity.bindClick(R.id.backStudyPlan, this::showQuizAnalysis);
+        activity.bindClick(R.id.backStudyPlan, studyPlanOpenedFromList
+                ? activity::showStudyPlanList
+                : this::showQuizAnalysis);
+        activity.bindClick(R.id.buttonDeleteStudyPlan, this::confirmDeleteCurrentStudyPlan);
         renderStudyPlan();
     }
 
@@ -1331,6 +1356,51 @@ class StudyController {
             }
         }
         progress.setText(completed + "/" + activity.currentStudyPlanTasks.size() + " nhiệm vụ hoàn thành");
+
+        TextView completionMessage = activity.findViewById(R.id.studyPlanCompletionMessage);
+        if (completionMessage != null) {
+            boolean isComplete = !activity.currentStudyPlanTasks.isEmpty()
+                    && completed == activity.currentStudyPlanTasks.size();
+            completionMessage.setVisibility(isComplete ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private boolean allStudyPlanTasksCompleted() {
+        if (activity.currentStudyPlanTasks.isEmpty()) return false;
+        for (StudyPlanTask task : activity.currentStudyPlanTasks) {
+            if (!task.completed) return false;
+        }
+        return true;
+    }
+
+    private void confirmDeleteCurrentStudyPlan() {
+        if (activity.currentStudyPlan == null) return;
+        new AlertDialog.Builder(activity)
+                .setTitle("Xóa kế hoạch?")
+                .setMessage("Kế hoạch và các nhiệm vụ bên trong sẽ bị xóa.")
+                .setNegativeButton("Hủy", null)
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    long planId = activity.currentStudyPlan.id;
+                    activity.studyRepository.deleteStudyPlan(planId, new RepositoryCallback<Integer>() {
+                        @Override
+                        public void onSuccess(Integer result) {
+                            activity.currentStudyPlan = null;
+                            activity.currentStudyPlanTasks = new ArrayList<>();
+                            Toast.makeText(activity, "Đã xóa kế hoạch", Toast.LENGTH_SHORT).show();
+                            if (studyPlanOpenedFromList) {
+                                activity.showStudyPlanList();
+                            } else {
+                                showQuizAnalysis();
+                            }
+                        }
+
+                        @Override
+                        public void onError(Exception exception) {
+                            Toast.makeText(activity, "Không thể xóa kế hoạch", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
+                .show();
     }
 
 
@@ -1361,6 +1431,9 @@ class StudyController {
             activity.studyRepository.updateStudyPlanTask(task.id, checked, new RepositoryCallback<Integer>() {
                 @Override
                 public void onSuccess(Integer result) {
+                    if (checked && allStudyPlanTasksCompleted()) {
+                        Toast.makeText(activity, "Chúc mừng! Bạn đã hoàn thành kế hoạch học.", Toast.LENGTH_LONG).show();
+                    }
                 }
 
                 @Override

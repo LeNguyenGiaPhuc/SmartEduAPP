@@ -21,6 +21,7 @@ import hcmute.com.smarteduapp.data.local.entity.QuizAttempt;
 import hcmute.com.smarteduapp.data.local.entity.QuizAttemptAnswer;
 import hcmute.com.smarteduapp.data.local.entity.StudyPlan;
 import hcmute.com.smarteduapp.data.local.entity.StudyPlanTask;
+import hcmute.com.smarteduapp.data.local.model.StudyPlanListItem;
 
 
 public class StudyRepository {
@@ -214,11 +215,44 @@ public class StudyRepository {
         });
     }
 
+    public void getStudyPlanById(long planId, RepositoryCallback<StudyPlan> callback) {
+        executor.execute(() -> {
+            try {
+                StudyPlan plan = studyPlanDao.getById(planId);
+                mainHandler.post(() -> callback.onSuccess(plan));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
     public void getStudyPlanTasks(long planId, RepositoryCallback<List<StudyPlanTask>> callback) {
         executor.execute(() -> {
             try {
                 List<StudyPlanTask> tasks = studyPlanTaskDao.getByPlanId(planId);
                 mainHandler.post(() -> callback.onSuccess(tasks));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void getAllStudyPlans(RepositoryCallback<List<StudyPlanListItem>> callback) {
+        executor.execute(() -> {
+            try {
+                List<StudyPlanListItem> plans = studyPlanDao.getAllWithMetadata();
+                mainHandler.post(() -> callback.onSuccess(plans));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onError(exception));
+            }
+        });
+    }
+
+    public void deleteStudyPlan(long planId, RepositoryCallback<Integer> callback) {
+        executor.execute(() -> {
+            try {
+                int result = studyPlanDao.deleteById(planId);
+                mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onError(exception));
             }

@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     SubjectRepository subjectRepository;
     DocumentRepository documentRepository;
     StudyRepository studyRepository;
-    long selectedSubjectId = -1L;
+        long selectedSubjectId = -1L;
     Subject selectedSubject;
     StudyDocument selectedDocument;
     GeminiService geminiService;
@@ -83,6 +83,7 @@ public class MainActivity extends AppCompatActivity {
     SubjectListRenderer subjectListRenderer;
     HistoryController historyController;
     ProgressController progressController;
+    StudyPlanController studyPlanController;
     SubjectController subjectController;
     StudyController studyController;
     DocumentController documentController;
@@ -131,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
         subjectListRenderer = new SubjectListRenderer(this);
         historyController = new HistoryController(this);
         progressController = new ProgressController(this);
+        studyPlanController = new StudyPlanController(this);
         subjectController = new SubjectController(this);
         studyController = new StudyController(this);
         documentController = new DocumentController(this);
@@ -292,6 +294,10 @@ public class MainActivity extends AppCompatActivity {
         bindClick(R.id.buttonProgressDashboard, () -> {
             hideHomeMenu();
             showProgress();
+        });
+        bindClick(R.id.buttonStudyPlans, () -> {
+            hideHomeMenu();
+            showStudyPlanList();
         });
         bindClick(R.id.buttonLogout, () -> {
             hideHomeMenu();
@@ -471,6 +477,14 @@ public class MainActivity extends AppCompatActivity {
 
     void showProgress() {
         progressController.showProgress();
+    }
+
+    void showStudyPlanList() {
+        studyPlanController.showPlanList();
+    }
+
+    void openStudyPlanFromList(long planId) {
+        studyController.openStudyPlanFromList(planId);
     }
 
     void startFocusQuizSession(boolean enabled) {

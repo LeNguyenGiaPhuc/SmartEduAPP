@@ -55,6 +55,40 @@
         android:textStyle="bold" />
 
     <TextView
+        android:id="@+id/buttonDeleteStudyPlan"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_gravity="end"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_action_chip_danger"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:text="Xóa kế hoạch"
+        android:textColor="@color/danger"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/studyPlanCompletionMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_badge_blue"
+        android:gravity="center"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="10dp"
+        android:text="Chúc mừng! Bạn đã hoàn thành kế hoạch học."
+        android:textColor="@color/brand_blue_dark"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/studyPlanProgress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
