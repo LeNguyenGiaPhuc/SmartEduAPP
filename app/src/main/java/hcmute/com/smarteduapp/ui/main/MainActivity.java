@@ -152,6 +152,8 @@ public class MainActivity extends AppCompatActivity {
                 if (currentScreen == R.layout.activity_main) {
                     setEnabled(false);
                     getOnBackPressedDispatcher().onBackPressed();
+                } else if (currentScreen == R.layout.screen_document_attachments) {
+                    documentController.showProcessDocument();
                 } else {
                     showHome();
                 }
@@ -539,11 +541,12 @@ public class MainActivity extends AppCompatActivity {
             Insets systemBars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
             );
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
             v.setPadding(
                     initialLeft + systemBars.left,
                     initialTop + systemBars.top,
                     initialRight + systemBars.right,
-                    initialBottom + systemBars.bottom
+                    initialBottom + Math.max(systemBars.bottom, ime.bottom)
             );
             return insets;
         });

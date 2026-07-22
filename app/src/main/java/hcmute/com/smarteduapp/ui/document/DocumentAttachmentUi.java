@@ -1,27 +1,31 @@
 package hcmute.com.smarteduapp.ui.document;
 
 import android.app.Activity;
+import android.database.Cursor;
 import android.net.Uri;
+import android.provider.OpenableColumns;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.card.MaterialCardView;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 import hcmute.com.smarteduapp.R;
 import hcmute.com.smarteduapp.data.local.entity.StudyDocumentAttachment;
+import hcmute.com.smarteduapp.ui.common.SimpleCardAdapter;
 import hcmute.com.smarteduapp.ui.common.UiViewFactory;
 
-/**
- * Displays document attachments and their preview.
- */
+/** Renders the attachment list. Long-pressing a row asks the controller to delete it. */
 public class DocumentAttachmentUi {
     public interface AttachmentCallbacks {
         void onDeleteAttachment(StudyDocumentAttachment attachment);
-
-        void onStudyActionsEnabledChanged(boolean enabled);
     }
 
     private final Activity activity;
@@ -30,85 +34,112 @@ public class DocumentAttachmentUi {
         this.activity = activity;
     }
 
-    public void renderThumbnails(List<StudyDocumentAttachment> attachments, AttachmentCallbacks callbacks) {
-        LinearLayout container = activity.findViewById(R.id.imageThumbnailsContainer);
+    public void renderAttachmentList(List<StudyDocumentAttachment> attachments,
+                                     AttachmentCallbacks callbacks) {
+        RecyclerView container = activity.findViewById(R.id.documentAttachmentListContainer);
+        TextView empty = activity.findViewById(R.id.emptyDocumentAttachments);
         if (container == null) {
             return;
         }
 
-        View addButton = activity.findViewById(R.id.buttonAddMoreImages);
-        container.removeAllViews();
-        if (addButton != null) {
-            container.addView(addButton);
-        }
+        UiViewFactory.setupVerticalRecycler(container);
+        empty.setVisibility(attachments.isEmpty() ? View.VISIBLE : View.GONE);
 
-        ImageView preview = activity.findViewById(R.id.imageDocPreview);
-        TextView placeholder = activity.findViewById(R.id.imageDocThumb);
-        if (attachments.isEmpty()) {
-            callbacks.onStudyActionsEnabledChanged(false);
-            showDocumentImage(null, preview, placeholder);
-            return;
-        }
-
-        callbacks.onStudyActionsEnabledChanged(true);
-        showDocumentImage(attachments.get(0).attachmentUri, preview, placeholder);
-
+        SimpleCardAdapter adapter = new SimpleCardAdapter();
+        List<SimpleCardAdapter.CardFactory> cards = new ArrayList<>();
         for (StudyDocumentAttachment attachment : attachments) {
-            ImageView thumb = new ImageView(activity);
-            int size = UiViewFactory.dp(activity, 60);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
-            lp.setMargins(0, 0, UiViewFactory.dp(activity, 8), 0);
-            thumb.setLayoutParams(lp);
-            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            thumb.setBackgroundResource(R.drawable.bg_pill);
-            thumb.setClipToOutline(true);
-
-            try {
-                thumb.setImageURI(Uri.parse(attachment.attachmentUri));
-            } catch (Exception e) {
-                thumb.setImageResource(android.R.drawable.ic_menu_report_image);
-            }
-
-            thumb.setOnClickListener(v -> showDocumentImage(attachment.attachmentUri, preview, placeholder));
-            thumb.setOnLongClickListener(v -> {
-                callbacks.onDeleteAttachment(attachment);
-                return true;
-            });
-
-            container.addView(thumb);
-            UiViewFactory.applyPressEffect(thumb);
-            UiViewFactory.animateIn(thumb, container.getChildCount());
+            cards.add((parent, position) -> createAttachmentCard(parent, attachment, callbacks, position));
         }
+        adapter.submit(cards);
+        container.setAdapter(adapter);
     }
 
-    public void showDocumentImage(String imageUri, ImageView imagePreview, TextView imagePlaceholder) {
-        if (imagePreview == null || imagePlaceholder == null) {
-            return;
+    private View createAttachmentCard(android.view.ViewGroup parent,
+                                      StudyDocumentAttachment attachment,
+                                      AttachmentCallbacks callbacks,
+                                      int position) {
+        MaterialCardView card = UiViewFactory.createCard(parent.getContext());
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.HORIZONTAL);
+        content.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        content.setPadding(UiViewFactory.dp(activity, 14), UiViewFactory.dp(activity, 12),
+                UiViewFactory.dp(activity, 14), UiViewFactory.dp(activity, 12));
+
+        ImageView preview = new ImageView(activity);
+        int previewSize = UiViewFactory.dp(activity, 58);
+        preview.setLayoutParams(new LinearLayout.LayoutParams(previewSize, previewSize));
+        preview.setBackgroundResource(R.drawable.bg_document_thumb);
+        preview.setPadding(UiViewFactory.dp(activity, 8), UiViewFactory.dp(activity, 8),
+                UiViewFactory.dp(activity, 8), UiViewFactory.dp(activity, 8));
+        preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        if (isImageAttachment(attachment.attachmentUri)) {
+            preview.setPadding(0, 0, 0, 0);
+            try {
+                preview.setImageURI(Uri.parse(attachment.attachmentUri));
+            } catch (Exception exception) {
+                preview.setImageResource(android.R.drawable.ic_menu_report_image);
+            }
+        } else {
+            preview.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            preview.setImageResource(android.R.drawable.ic_menu_upload);
         }
 
-        if (isBlank(imageUri)) {
-            imagePreview.setVisibility(View.GONE);
-            imagePlaceholder.setVisibility(View.VISIBLE);
-            imagePlaceholder.setText("Chưa có file tài liệu");
-            return;
-        }
+        LinearLayout textBox = new LinearLayout(activity);
+        textBox.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+        );
+        textParams.setMargins(UiViewFactory.dp(activity, 14), 0, 0, 0);
+        textBox.setLayoutParams(textParams);
 
-        if (!isImageAttachment(imageUri)) {
-            imagePreview.setVisibility(View.GONE);
-            imagePlaceholder.setVisibility(View.VISIBLE);
-            imagePlaceholder.setText(getDocumentAttachmentLabel(imageUri));
-            return;
-        }
+        TextView title = UiViewFactory.createText(activity,
+                getAttachmentDisplayName(attachment.attachmentUri), 15, R.color.ink, true);
+        title.setMaxLines(2);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
 
-        try {
-            imagePreview.setImageURI(Uri.parse(imageUri));
-            imagePreview.setVisibility(View.VISIBLE);
-            imagePlaceholder.setVisibility(View.GONE);
-        } catch (Exception exception) {
-            imagePreview.setVisibility(View.GONE);
-            imagePlaceholder.setVisibility(View.VISIBLE);
-            imagePlaceholder.setText("Không thể hiển thị ảnh");
+        TextView subtitle = UiViewFactory.createText(activity,
+                getDocumentAttachmentLabel(attachment.attachmentUri)
+                        + " · Nhấn giữ để xóa", 12, R.color.ink_muted, false);
+        subtitle.setMaxLines(2);
+
+        textBox.addView(title);
+        textBox.addView(subtitle);
+        content.addView(preview);
+        content.addView(textBox);
+        card.addView(content);
+        card.setOnLongClickListener(v -> {
+            callbacks.onDeleteAttachment(attachment);
+            return true;
+        });
+        UiViewFactory.animateIn(card, position);
+        return card;
+    }
+
+    public String getAttachmentDisplayName(String attachmentUri) {
+        if (isBlank(attachmentUri)) {
+            return "Tệp tài liệu";
         }
+        Uri uri = Uri.parse(attachmentUri);
+        try (Cursor cursor = activity.getContentResolver().query(
+                uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (index >= 0) {
+                    String name = cursor.getString(index);
+                    if (!isBlank(name)) {
+                        return name;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Một số URI do camera tạo không có display name.
+        }
+        String path = uri.getPath();
+        if (!isBlank(path)) {
+            int separator = path.lastIndexOf('/');
+            return separator >= 0 ? path.substring(separator + 1) : path;
+        }
+        return "Tệp tài liệu";
     }
 
     public String getDocumentAttachmentLabel(String attachmentUri) {
@@ -117,12 +148,12 @@ public class DocumentAttachmentUi {
         }
         String mimeType = getAttachmentMimeType(attachmentUri);
         if (!isBlank(mimeType)) {
-            if (mimeType.startsWith("image/")) return "Có ảnh tài liệu";
-            if ("application/pdf".equals(mimeType)) return "Có file PDF";
-            if (mimeType.contains("wordprocessingml")) return "Có file DOCX";
-            if (mimeType.startsWith("text/")) return "Có file văn bản";
+            if (mimeType.startsWith("image/")) return "Ảnh tài liệu";
+            if ("application/pdf".equals(mimeType)) return "File PDF";
+            if (mimeType.contains("wordprocessingml")) return "File DOCX";
+            if (mimeType.startsWith("text/")) return "File văn bản";
         }
-        return "Có file tài liệu";
+        return "File tài liệu";
     }
 
     private boolean isImageAttachment(String attachmentUri) {
@@ -131,10 +162,8 @@ public class DocumentAttachmentUi {
             return mimeType.startsWith("image/");
         }
         String lowerUri = attachmentUri == null ? "" : attachmentUri.toLowerCase(Locale.US);
-        return lowerUri.endsWith(".jpg")
-                || lowerUri.endsWith(".jpeg")
-                || lowerUri.endsWith(".png")
-                || lowerUri.endsWith(".webp");
+        return lowerUri.endsWith(".jpg") || lowerUri.endsWith(".jpeg")
+                || lowerUri.endsWith(".png") || lowerUri.endsWith(".webp");
     }
 
     private String getAttachmentMimeType(String attachmentUri) {

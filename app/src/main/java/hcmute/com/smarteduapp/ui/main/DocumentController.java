@@ -457,9 +457,6 @@ class DocumentController {
 
         TextView textDocName = activity.findViewById(R.id.textDocName);
         TextView textContentStatus = activity.findViewById(R.id.textContentStatus);
-        ImageView imagePreview = activity.findViewById(R.id.imageDocPreview);
-        TextView imagePlaceholder = activity.findViewById(R.id.imageDocThumb);
-
         if (activity.selectedDocument != null) {
             textDocName.setText("Tài liệu: " + activity.selectedDocument.title);
             if (activity.isBlank(activity.selectedDocument.ocrText)) {
@@ -467,29 +464,48 @@ class DocumentController {
             } else {
                 textContentStatus.setText("Đã có nội dung được quét. Bạn có thể xem nội dung hoặc dùng AI.");
             }
-            showDocumentImage(null, imagePreview, imagePlaceholder);
             loadDocumentAttachments(activity.selectedDocument.id);
         }
 
         activity.bindClick(R.id.backHome, this::goBackFromProcessDocument);
-        activity.bindClick(R.id.buttonRunOcr, this::runOcrForCurrentDocument);
-        activity.bindClick(R.id.buttonViewDocumentContent, this::showDocumentContent);
+        activity.bindClick(R.id.buttonOpenDocumentAttachments, this::showAttachmentList);
         activity.bindClick(R.id.buttonEditDocument, () -> {
             if (activity.selectedDocument != null) {
                 showDocumentForm(activity.selectedDocument.id);
             }
         });
+        activity.bindClick(R.id.buttonRunOcr, this::runOcrForCurrentDocument);
+        activity.bindClick(R.id.buttonViewDocumentContent, this::showDocumentContent);
         activity.bindClick(R.id.buttonSummary, activity::createSummaryFromCurrentDocument);
         activity.bindClick(R.id.buttonCreateQuiz, activity::createQuizFromCurrentDocument);
         activity.bindClick(R.id.buttonExplain, activity::showAiChat);
         activity.bindClick(R.id.buttonReviewMistakes, activity::reviewMistakesForCurrentDocument);
-        activity.bindClick(R.id.buttonDeleteDocumentFromDetail, this::confirmDeleteCurrentDocument);
-        activity.bindClick(R.id.buttonAddMoreImages, () -> activity.addMoreAttachmentsPickerLauncher.launch(new String[]{
+    }
+
+
+    void showAttachmentList() {
+        if (activity.selectedDocument == null) {
+            activity.showSubjectDetail();
+            return;
+        }
+
+        activity.currentScreen = R.layout.screen_document_attachments;
+        activity.setContentView(R.layout.screen_document_attachments);
+        activity.applySystemBars();
+
+        TextView title = activity.findViewById(R.id.documentAttachmentsTitle);
+        TextView subtitle = activity.findViewById(R.id.documentAttachmentsSubtitle);
+        title.setText("Danh sách tài liệu");
+        subtitle.setText("Các ảnh và file của: " + activity.selectedDocument.title);
+
+        activity.bindClick(R.id.backDocumentAttachments, this::showProcessDocument);
+        activity.bindClick(R.id.buttonAddDocumentAttachment, () -> activity.addMoreAttachmentsPickerLauncher.launch(new String[]{
                 "image/*",
                 "application/pdf",
                 "text/plain",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         }));
+        loadDocumentAttachments(activity.selectedDocument.id);
     }
 
 
@@ -558,7 +574,7 @@ class DocumentController {
                     return;
                 }
                 activity.selectedDocumentAttachments = attachments;
-                renderThumbnails(attachments);
+                renderAttachmentList(attachments);
             }
             @Override
             public void onError(Exception e) {}
@@ -569,7 +585,7 @@ class DocumentController {
     void migrateLegacyDocumentAttachment(List<StudyDocumentAttachment> existingAttachments) {
         if (activity.selectedDocument == null || activity.isBlank(activity.selectedDocument.legacyAttachmentUri)) {
             activity.selectedDocumentAttachments = existingAttachments;
-            renderThumbnails(existingAttachments);
+            renderAttachmentList(existingAttachments);
             return;
         }
 
@@ -594,24 +610,20 @@ class DocumentController {
             @Override
             public void onError(Exception exception) {
                 activity.selectedDocumentAttachments = existingAttachments;
-                renderThumbnails(existingAttachments);
+                renderAttachmentList(existingAttachments);
             }
         });
     }
 
 
-    void renderThumbnails(List<StudyDocumentAttachment> attachments) {
-        activity.documentAttachmentUi.renderThumbnails(attachments, new DocumentAttachmentUi.AttachmentCallbacks() {
+    void renderAttachmentList(List<StudyDocumentAttachment> attachments) {
+        activity.documentAttachmentUi.renderAttachmentList(attachments, new DocumentAttachmentUi.AttachmentCallbacks() {
             @Override
             public void onDeleteAttachment(StudyDocumentAttachment attachment) {
                 confirmDeleteAttachment(attachment);
             }
-
-            @Override
-            public void onStudyActionsEnabledChanged(boolean enabled) {
-                setStudyActionsEnabled(enabled);
-            }
         });
+        setStudyActionsEnabled(!attachments.isEmpty());
     }
 
 
@@ -733,7 +745,7 @@ class DocumentController {
                     clearGeneratedStateForCurrentDocument(true);
                     return;
                 }
-                renderThumbnails(attachments);
+                renderAttachmentList(attachments);
             }
 
             @Override
@@ -917,11 +929,6 @@ class DocumentController {
             button.setText(loading ? "Đang quét..." : "Quét nội dung tài liệu");
         }
         setStudyActionsEnabled(!loading);
-    }
-
-
-    void showDocumentImage(String imageUri, ImageView imagePreview, TextView imagePlaceholder) {
-        activity.documentAttachmentUi.showDocumentImage(imageUri, imagePreview, imagePlaceholder);
     }
 
 
