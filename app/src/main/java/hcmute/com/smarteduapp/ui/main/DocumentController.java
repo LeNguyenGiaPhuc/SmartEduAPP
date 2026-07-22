@@ -361,6 +361,7 @@ class DocumentController {
                 .setMessage("Bạn có muốn bỏ file/ảnh này khỏi tài liệu đang chọn không?")
                 .setNegativeButton("Hủy", null)
                 .setPositiveButton("Xóa", (dialog, which) -> removePendingAttachment(index))
+                .setPositiveButton("Xóa", (dialog, which) -> removePendingAttachment(index))
                 .show();
     }
 
